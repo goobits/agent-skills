@@ -48,7 +48,7 @@ _aw_completion() {
   case "${COMP_WORDS[1]:-}" in
     commit)
       if [[ "$COMP_CWORD" -eq 2 ]]; then
-        COMPREPLY=( $(compgen -W "setup add status doctor wait poke" -- "$cur") )
+        COMPREPLY=( $(compgen -W "setup request status doctor wait poke" -- "$cur") )
       else
         case "${COMP_WORDS[2]:-}" in
           setup)
@@ -58,7 +58,7 @@ _aw_completion() {
               COMPREPLY=( $(compgen -W "--tab --session --agent --no-agent" -- "$cur") )
             fi
             ;;
-          add)
+          request|add)
             COMPREPLY=( $(compgen -W "--check --verify --root --summary --owner --must-contain --must-not-contain --poke --wait --timeout --poll" -- "$cur") )
             _aw_file_replies
             ;;
@@ -73,6 +73,30 @@ _aw_completion() {
             ;;
         esac
       fi
+      ;;
+    repo)
+      if [[ "$COMP_CWORD" -eq 2 ]]; then
+        COMPREPLY=( $(compgen -W "doctor migrate clean measure-git probe-git-config worktree" -- "$cur") )
+      else
+        case "${COMP_WORDS[2]:-}" in
+          migrate)
+            COMPREPLY=( $(compgen -W "--dry-run" -- "$cur") )
+            ;;
+          clean)
+            COMPREPLY=( $(compgen -W "--delete --generated --rust-targets --nested-node-modules --all-safe --build-outputs --preprocessed" -- "$cur") )
+            ;;
+          probe-git-config)
+            COMPREPLY=( $(compgen -W "--path --apply" -- "$cur") )
+            ;;
+          worktree)
+            COMPREPLY=( $(compgen -W "--branch --base --skip-deps --copy-deps" -- "$cur") )
+            _aw_file_replies
+            ;;
+        esac
+      fi
+      ;;
+    owner)
+      [[ "$COMP_CWORD" -eq 2 ]] && COMPREPLY=( $(compgen -W "git pkg" -- "$cur") )
       ;;
     tab)
       case "${COMP_WORDS[2]:-}" in
@@ -113,7 +137,7 @@ _aw_completion() {
       ;;
     *)
       if [[ "$COMP_CWORD" -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "help install setup doctor migrate list create refresh rename remove tab commit ps kill $(_aw_workspaces)" -- "$cur") )
+        COMPREPLY=( $(compgen -W "help install setup doctor repo list create refresh rename remove tab commit owner ps kill $(_aw_workspaces)" -- "$cur") )
       elif [[ "$COMP_CWORD" -gt 1 ]]; then
         COMPREPLY=( $(compgen -W "-s --session -r --root" -- "$cur") )
       fi

@@ -17,12 +17,12 @@ fn help_prints_public_cli_header_on_stdout() {
 }
 
 #[test]
-fn commit_add_rejects_missing_paths_before_queue_lookup() {
+fn commit_request_rejects_missing_paths_before_queue_lookup() {
     let output = aw()
-        .args(["commit", "add", "Missing paths"])
+        .args(["commit", "request", "Missing paths"])
         .output()
-        .expect("run aw commit add");
+        .expect("run aw commit request");
     assert_eq!(output.status.code(), Some(2));
     assert!(String::from_utf8_lossy(&output.stderr)
-        .contains("commit add requires a title and at least one path"));
+        .contains("commit request requires a title and at least one path"));
 }

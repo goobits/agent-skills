@@ -404,23 +404,23 @@ pub(super) fn timestamp() -> String {
 fn print_usage() {
     println!(
         "Usage:
-  aw gitq status [git status args]
-  aw gitq status-fast [git status args]
-  aw gitq lock-info
-  aw gitq health [--deep] [--recursive]
-  aw gitq repair-index [--recursive]
-  aw gitq chmod +x| -x -- <paths...>
-  aw gitq fetch <git fetch args...>
-  aw gitq push <git push args...>
-  aw gitq lfs-push <git lfs push args...>
-  aw gitq worktree <git worktree args...>
-  aw gitq clone <git clone args...>
-  aw gitq submodule-sync <git submodule sync args...>
-  aw gitq submodule-update <git submodule update args...>
-  aw gitq maintenance
-  aw gitq submodule-status
-  aw gitq shell
-  aw gitq commit-owned -m \"message\" -- <owned paths...>
-  aw gitq -- <read-only raw git args...>"
+  aw owner git status [git status args]
+  aw owner git status-fast [git status args]
+  aw owner git lock-info
+  aw owner git health [--deep] [--recursive]
+  aw owner git repair-index [--recursive]
+  aw owner git chmod +x| -x -- <paths...>
+  aw owner git fetch <git fetch args...>
+  aw owner git push <git push args...>
+  aw owner git lfs-push <git lfs push args...>
+  aw owner git worktree <git worktree args...>
+  aw owner git clone <git clone args...>
+  aw owner git submodule-sync <git submodule sync args...>
+  aw owner git submodule-update <git submodule update args...>
+  aw owner git maintenance
+  aw owner git submodule-status
+  aw owner git shell
+  aw owner git commit-owned -m \"message\" -- <owned paths...>
+  aw owner git -- <read-only raw git args...>"
     );
 }

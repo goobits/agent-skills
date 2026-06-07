@@ -42,10 +42,12 @@ _aw_tabs() {
 }
 
 _aw() {
-  local -a commands tab_commands commit_commands
-  commands=(help install setup doctor migrate list create refresh rename remove tab commit ps kill)
+  local -a commands tab_commands commit_commands repo_commands owner_commands
+  commands=(help install setup doctor repo list create refresh rename remove tab commit owner ps kill)
   tab_commands=(list add move rename remove refresh)
-  commit_commands=(setup add status doctor wait poke)
+  commit_commands=(setup request status doctor wait poke)
+  repo_commands=(doctor migrate clean measure-git probe-git-config worktree)
+  owner_commands=(git pkg)
 
   case "${words[2]:-}" in
     commit)
@@ -61,7 +63,7 @@ _aw() {
             compadd -- --tab --session --agent --no-agent
           fi
           ;;
-        add)
+        request|add)
           compadd -- --check --verify --root --summary --owner --must-contain --must-not-contain --poke --wait --timeout --poll
           _files
           ;;
@@ -73,6 +75,33 @@ _aw() {
           ;;
         poke)
           compadd -- git --root
+          ;;
+      esac
+      ;;
+    repo)
+      case "${words[3]:-}" in
+        "")
+          compadd -- "${repo_commands[@]}"
+          ;;
+        migrate)
+          compadd -- --dry-run
+          ;;
+        clean)
+          compadd -- --delete --generated --rust-targets --nested-node-modules --all-safe --build-outputs --preprocessed
+          ;;
+        probe-git-config)
+          compadd -- --path --apply
+          ;;
+        worktree)
+          compadd -- --branch --base --skip-deps --copy-deps
+          _files -/
+          ;;
+      esac
+      ;;
+    owner)
+      case "${words[3]:-}" in
+        "")
+          compadd -- "${owner_commands[@]}"
           ;;
       esac
       ;;

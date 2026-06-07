@@ -29,17 +29,17 @@ fn repo(name: &str) -> TempDir {
 }
 
 #[test]
-fn gitq_rejects_raw_mutations_and_allows_lockless_reads() {
-    let repo = repo("gitq-raw");
+fn owner_git_rejects_raw_mutations_and_allows_lockless_reads() {
+    let repo = repo("owner-git-raw");
     let status = Command::new(support::command::aw())
-        .args(["gitq", "status-fast"])
+        .args(["owner", "git", "status-fast"])
         .current_dir(repo.path())
         .output()
         .expect("status-fast");
     assert_success("status-fast", &status);
 
     let raw_add = Command::new(support::command::aw())
-        .args(["gitq", "--", "add", "owned.txt"])
+        .args(["owner", "git", "--", "add", "owned.txt"])
         .current_dir(repo.path())
         .output()
         .expect("raw add");
@@ -48,14 +48,15 @@ fn gitq_rejects_raw_mutations_and_allows_lockless_reads() {
 }
 
 #[test]
-fn gitq_commit_owned_commits_only_requested_paths() {
-    let repo = repo("gitq-commit-owned");
+fn owner_git_commit_owned_commits_only_requested_paths() {
+    let repo = repo("owner-git-commit-owned");
     temp::write(repo.join("owned.txt"), "updated\n");
     temp::write(repo.join("other.txt"), "untracked\n");
 
     let commit = Command::new(support::command::aw())
         .args([
-            "gitq",
+            "owner",
+            "git",
             "commit-owned",
             "-m",
             "update owned",
@@ -76,7 +77,7 @@ fn gitq_commit_owned_commits_only_requested_paths() {
     assert_eq!(stdout(&log), "update owned");
 
     let glob = Command::new(support::command::aw())
-        .args(["gitq", "commit-owned", "-m", "bad", "--", "*.txt"])
+        .args(["owner", "git", "commit-owned", "-m", "bad", "--", "*.txt"])
         .current_dir(repo.path())
         .output()
         .expect("glob");
@@ -85,13 +86,13 @@ fn gitq_commit_owned_commits_only_requested_paths() {
 }
 
 #[test]
-fn pkgq_lock_info_uses_native_queue_surface() {
-    let repo = repo("pkgq-lock-info");
+fn owner_pkg_lock_info_uses_native_queue_surface() {
+    let repo = repo("owner-pkg-lock-info");
     let output = Command::new(support::command::aw())
-        .args(["pkgq", "lock-info"])
+        .args(["owner", "pkg", "lock-info"])
         .current_dir(repo.path())
         .output()
-        .expect("pkgq lock-info");
-    assert_success("pkgq lock-info", &output);
+        .expect("owner-pkg lock-info");
+    assert_success("owner-pkg lock-info", &output);
     assert_eq!(stdout(&output), "pkgq: no active queue lock");
 }

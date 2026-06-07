@@ -16,18 +16,19 @@ pub fn run(args: &[String]) -> Result<i32> {
         print_usage();
         return Ok(0);
     };
-    match command.as_str() {
+    run_named(command, rest)
+}
+
+pub fn run_named(command: &str, args: &[String]) -> Result<i32> {
+    match command {
         "-h" | "--help" | "help" => {
             print_usage();
             Ok(0)
         }
-        "cleanup-generated" => cleanup_generated(rest),
-        "measure-git" => measure_git(rest),
-        "probe-git-config" => probe_git_config(rest),
-        other => Err(AwError::new(
-            format!("aw workspace: unknown command {other}"),
-            1,
-        )),
+        "cleanup-generated" => cleanup_generated(args),
+        "measure-git" => measure_git(args),
+        "probe-git-config" => probe_git_config(args),
+        other => Err(AwError::new(format!("aw repo: unknown command {other}"), 1)),
     }
 }
 
@@ -434,8 +435,8 @@ fn line_count(text: &str) -> usize {
 fn print_usage() {
     println!(
         "Usage:
-  aw workspace cleanup-generated [--delete] [--generated|--rust-targets|--nested-node-modules|--all-safe|--build-outputs|--preprocessed]
-  aw workspace measure-git [path]
-  aw workspace probe-git-config [--path path] [--apply]"
+  aw repo clean [--delete] [--generated|--rust-targets|--nested-node-modules|--all-safe|--build-outputs|--preprocessed]
+  aw repo measure-git [path]
+  aw repo probe-git-config [--path path] [--apply]"
     );
 }

@@ -26,7 +26,7 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
         .aw_command()
         .args([
             "commit",
-            "add",
+            "request",
             "Commit queue docs",
             "README.md",
             "--check",
@@ -38,8 +38,8 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
         .arg(&queue)
         .current_dir(&project)
         .output()
-        .expect("commit add");
-    assert_success("commit add", &output);
+        .expect("commit request");
+    assert_success("commit request", &output);
     assert!(stdout(&output).starts_with("Created commit request "));
     assert!(stdout(&output).contains("Run `aw commit poke git --root "));
     assert_eq!(
@@ -54,13 +54,13 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
     let wait_queue = home.root.join("wait-queue");
     let wait_add = home
         .aw_command()
-        .args(["commit", "add", "Wait docs", "README.md", "--root"])
+        .args(["commit", "request", "Wait docs", "README.md", "--root"])
         .arg(&wait_queue)
         .args(["--check", "echo ok"])
         .current_dir(&project)
         .output()
-        .expect("wait add");
-    assert_success("wait add", &wait_add);
+        .expect("wait request");
+    assert_success("wait request", &wait_add);
     let wait_stdout = stdout(&wait_add);
     let wait_id = wait_stdout
         .split_whitespace()
@@ -102,7 +102,7 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
 
     let timed_out = home
         .aw_command()
-        .args(["commit", "add", "Wait timeout", "README.md", "--root"])
+        .args(["commit", "request", "Wait timeout", "README.md", "--root"])
         .arg(home.root.join("wait-timeout-queue"))
         .args(["--wait", "--wait", "--timeout", "1ms", "--poll", "1ms"])
         .current_dir(&project)
@@ -115,7 +115,7 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
         "missing paths",
         &home
             .aw_command()
-            .args(["commit", "add", "Missing paths", "--root"])
+            .args(["commit", "request", "Missing paths", "--root"])
             .arg(&queue)
             .current_dir(&project)
             .output()
@@ -125,7 +125,7 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
         .aw_command()
         .args([
             "commit",
-            "add",
+            "request",
             "Bad flag value",
             "README.md",
             "--summary",
@@ -219,7 +219,7 @@ fn commit_doctor_surfaces_blocked_tickets_when_queue_is_ready() {
 
     let blocked_add = home
         .aw_command()
-        .args(["commit", "add", "Blocked docs", "README.md", "--root"])
+        .args(["commit", "request", "Blocked docs", "README.md", "--root"])
         .arg(&queue)
         .current_dir(&project)
         .output()
@@ -248,7 +248,7 @@ fn commit_doctor_surfaces_blocked_tickets_when_queue_is_ready() {
         "next add",
         &home
             .aw_command()
-            .args(["commit", "add", "Next docs", "NEXT.md", "--root"])
+            .args(["commit", "request", "Next docs", "NEXT.md", "--root"])
             .arg(&queue)
             .current_dir(&project)
             .output()

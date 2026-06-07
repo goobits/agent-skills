@@ -22,11 +22,15 @@ pub fn run_commit_command(args: &[String]) -> Result<i32> {
             Ok(0)
         }
         "add" => {
-            commit_add(rest)?;
+            commit_add("add", rest)?;
             Ok(0)
         }
         "request" => {
             commit_request(rest)?;
+            Ok(0)
+        }
+        "raw-request" => {
+            commit_raw_request(rest)?;
             Ok(0)
         }
         "status" => {
@@ -149,11 +153,11 @@ fn setup_commit_tab(args: &[String]) -> Result<()> {
     Ok(())
 }
 
-fn commit_add(args: &[String]) -> Result<()> {
+fn commit_add(action: &str, args: &[String]) -> Result<()> {
     if args.len() < 2 {
-        return Err(AwError::usage(
-            "aw: commit add requires a title and at least one path",
-        ));
+        return Err(AwError::usage(format!(
+            "aw: commit {action} requires a title and at least one path"
+        )));
     }
 
     let mut filtered = vec!["--title".to_string(), args[0].clone()];
@@ -209,8 +213,7 @@ fn commit_add(args: &[String]) -> Result<()> {
             }
             other if other.starts_with("--") => {
                 return Err(AwError::usage(format!(
-                    "aw: unknown commit add argument {}",
-                    other
+                    "aw: unknown commit {action} argument {other}"
                 )));
             }
             path => {
@@ -223,7 +226,9 @@ fn commit_add(args: &[String]) -> Result<()> {
     }
 
     if path_count == 0 {
-        return Err(AwError::usage("aw: commit add requires at least one path"));
+        return Err(AwError::usage(format!(
+            "aw: commit {action} requires at least one path"
+        )));
     }
 
     let request_file = run_commit_queue_capture("request", &filtered)?;
@@ -281,6 +286,13 @@ fn commit_add(args: &[String]) -> Result<()> {
 }
 
 fn commit_request(args: &[String]) -> Result<()> {
+    if args.first().is_some_and(|arg| arg.starts_with("--")) {
+        return commit_raw_request(args);
+    }
+    commit_add("request", args)
+}
+
+fn commit_raw_request(args: &[String]) -> Result<()> {
     let mut filtered = Vec::new();
     let mut root_value = String::new();
     let mut poke = false;

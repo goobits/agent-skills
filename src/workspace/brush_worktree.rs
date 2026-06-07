@@ -333,7 +333,7 @@ fn default_branch() -> String {
 
 fn print_usage() {
     println!(
-        "Usage: aw brush-api worktree <path> [--branch name] [--base ref] [--skip-deps] [--copy-deps]
+        "Usage: aw repo worktree <path> [--branch name] [--base ref] [--skip-deps] [--copy-deps]
 
 Creates a branch-backed Brush API worktree, hydrates local submodules from the
 current checkout when possible, copies generated brush WASM artifacts, and

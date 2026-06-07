@@ -23,8 +23,8 @@ architecture. Set `ZELLIJ_INSTALL_BINARY=0` to skip binary installation. In
 repos without the package script, use `cargo run --manifest-path
 infra/agent-workspace/Cargo.toml -- install` instead.
 
-For a consuming repo that includes `infra/agent-workspace`, make Agent Workspace the
-one-stop setup owner:
+For a consuming repo that includes `infra/agent-workspace`, make Agent
+Workspace the one-stop setup owner:
 
 ```bash
 pnpm run aw:install
@@ -33,7 +33,7 @@ pnpm run aw:install
 `--repo` creates the portable agent adapters and installs the repo-owned
 `config/aw` profile. Use `pnpm run aw:install --dry-run` to preview adapter
 changes without writing files. Non-dry-run repo installs and migrations finish
-with `aw doctor repo`.
+with `aw repo doctor`.
 
 Agent Workspace owns the shared agent bundle too:
 
@@ -46,8 +46,8 @@ repo/
   .claude/skills -> ../.agents/skills
 ```
 
-Shared behavior belongs in `infra/agent-workspace/agents/.agents`. Repo-specific facts stay
-in `.agents.local/project.md`.
+Shared behavior belongs in `infra/agent-workspace/agents/.agents`.
+Repo-specific facts stay in `.agents.local/project.md`.
 
 ### 2. Create A Workspace
 
@@ -113,18 +113,13 @@ aw refresh front
 aw rename <old> <new>
 aw remove <workspace>
 aw doctor       # Validate install, profile config, and runtime tab order
-aw doctor repo  # Validate repo adapters, config/aw, and git tab
-aw migrate repo # Repair old repo adapter paths into the Agent Workspace layout
+aw repo doctor  # Validate repo adapters, config/aw, and git tab
+aw repo migrate # Repair old repo adapter paths into the Agent Workspace layout
 ```
 
 Shell completions are installed for zsh and bash. They complete commands,
 workspace names, known tab names, and commit queue flags from the current
 `config/aw` profile.
-
-Advanced commit request flags such as `--owner`, `--must-contain`, and
-`--must-not-contain` are public because the queue uses them for scoped owner
-metadata and fingerprint checks. Do not use fingerprint flags for tickets that
-you expect to fold later unless those fingerprints will remain true.
 
 ### 5. Live Tab Management
 
@@ -154,8 +149,8 @@ are mostly for agent workflows, not everyday human workspace opening.
 
 Use this queue when multiple workers share the same checkout. It serializes Git
 and package-manager mutations so nobody commits from a stale status view or
-races over package metadata. Shared-agent workspace examples should include one
-lowercase `git` tab so the commit owner has a predictable place to run.
+races over package metadata. Shared-agent workspaces should include one
+lowercase `git` tab for the commit owner.
 
 Set up the commit-owner tab:
 
@@ -164,10 +159,10 @@ aw commit setup front --tab git --agent codex
 aw commit setup front --session sketch-api --tab git --agent codex
 ```
 
-Worker tabs use only the humane front door:
+Worker tabs use only the request/status front door:
 
 ```bash
-aw commit add "Describe the scoped change" path/to/file \
+aw commit request "Describe the scoped change" path/to/file \
   --check "targeted verification command" \
   --poke git
 
@@ -178,7 +173,7 @@ aw commit wait <request-id>
 
 Use `aw commit wait <request-id>` only for one ticket. There is intentionally
 no global wait command, because that would make a worker wait for unrelated
-queue items from other agents. `aw commit add ... --wait` waits only for the
+queue items from other agents. `aw commit request ... --wait` waits only for the
 request it just created.
 
 Use `aw commit doctor` when the queue feels stuck. It gives the readable
@@ -188,7 +183,7 @@ Advanced request flags are available when a ticket needs stronger metadata or
 fingerprint checks:
 
 ```bash
-aw commit add "Update docs" README.md \
+aw commit request "Update docs" README.md \
   --check "pnpm test" \
   --must-contain "Expected text" \
   --must-not-contain "Stale text" \
@@ -203,27 +198,22 @@ If you use a custom queue root, pass `--root <queue-root>` to both the producer
 and the `git` tab command.
 
 ```bash
-aw commit add "Update docs" README.md --root /tmp/commit-queue --poke git
+aw commit request "Update docs" README.md --root /tmp/commit-queue --poke git
 aw commit poke git --root /tmp/commit-queue
 ```
 
-#### Owner Queues
+#### Owner Internals
 
-The lower-level Git and package queue commands are commit-owner internals exposed
-through `aw gitq` and `aw pkgq`. They are not worker instructions and should
-not be copied into normal agent guidance.
+`aw owner git` and `aw owner pkg` are commit-owner internals, not worker
+instructions. Worker tabs should not run final commits, staging, repair, or
+package mutations directly.
 
-Worker tabs should not run final commit, staging, repair, or package mutation
-commands directly. They should submit scoped requests with
-`aw commit add ... --poke git` and wait for one request ID only when they need a
-response.
-
-The commit owner may use `aw gitq` for scoped commits, repair, chmod,
-fetch/push, and submodule setup after reading the live local policy. The commit
-owner may clear stale queue or `.git/index.lock` files only after checking that
-no active Git, package-manager, or queue owner process is still using the
-checkout. Worker tabs must not remove locks manually. After clearing a stale
-lock, rerun queue/status/health checks before committing.
+The commit owner may use owner internals for scoped commits, repair, chmod,
+fetch/push, package mutations, and submodule setup after reading the live local
+policy. The commit owner may clear stale queue or `.git/index.lock` files only
+after checking that no active Git, package-manager, or queue owner process is
+still using the checkout. Worker tabs must not remove locks manually. After
+clearing a stale lock, rerun queue/status/health checks before committing.
 
 #### Brush API Worktrees
 
@@ -231,7 +221,7 @@ Use the Brush API worktree helper when brush work needs isolation from the
 shared checkout's Git index, HMR state, or active user-facing dev server:
 
 ```bash
-aw brush-api worktree /tmp/brush-v8-fluid
+aw repo worktree /tmp/brush-v8-fluid
 cd /tmp/brush-v8-fluid
 pnpm --filter @sketchapi/brush-api run check:types
 ```
@@ -263,8 +253,8 @@ deleted and untracked, or when the commit owner detects an index/HEAD entry
 mismatch. Use the recursive form only when a submodule or nested repo shows the
 same pattern.
 
-`aw gitq repair-index` rebuilds `.git/index` from `HEAD`, backs up the
-existing index, and does not update worktree files. `aw gitq repair-index
+`aw owner git repair-index` rebuilds `.git/index` from `HEAD`, backs up the
+existing index, and does not update worktree files. `aw owner git repair-index
 --recursive` applies the same repair to initialized submodules declared in
 `.gitmodules`, recursively declared nested submodules, and extra initialized
 nested Git repos with their own `.git` file or directory.
@@ -274,11 +264,11 @@ nested Git repos with their own `.git` file or directory.
 Dry-run generated cleanup before deleting anything:
 
 ```bash
-aw workspace cleanup-generated
-aw workspace cleanup-generated --generated
-aw workspace cleanup-generated --rust-targets
-aw workspace cleanup-generated --nested-node-modules
-aw workspace cleanup-generated --preprocessed
+aw repo clean
+aw repo clean --generated
+aw repo clean --rust-targets
+aw repo clean --nested-node-modules
+aw repo clean --preprocessed
 ```
 
 The command reports candidates by default. It deletes only when `--delete` is
@@ -303,11 +293,11 @@ Manual-review category:
 Use the measurement tools to prove workspace changes helped instead of guessing.
 
 ```bash
-aw workspace measure-git
-aw workspace measure-git infra/agent-workspace
-aw workspace probe-git-config
-aw workspace probe-git-config --path infra/agent-workspace
-aw workspace probe-git-config --path infra/agent-workspace --apply
+aw repo measure-git
+aw repo measure-git infra/agent-workspace
+aw repo probe-git-config
+aw repo probe-git-config --path infra/agent-workspace
+aw repo probe-git-config --path infra/agent-workspace --apply
 ```
 
 `measure-git` prints full and path-scoped Git timings. Pass a path to measure a

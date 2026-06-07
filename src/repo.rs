@@ -8,7 +8,7 @@ const CANONICAL_AGENTS: &str = "infra/agent-workspace/agents/.agents";
 
 pub fn run_doctor(args: &[String]) -> Result<i32> {
     if !args.is_empty() {
-        return Err(AwError::usage("aw doctor repo does not accept arguments"));
+        return Err(AwError::usage("aw repo doctor does not accept arguments"));
     }
     doctor_repo()
 }
@@ -36,9 +36,7 @@ pub fn doctor_repo() -> Result<i32> {
 
 pub fn run_migrate(args: &[String]) -> Result<i32> {
     let Some((scope, rest)) = args.split_first() else {
-        return Err(AwError::usage(
-            "aw migrate requires a scope, for example: aw migrate repo",
-        ));
+        return Err(AwError::usage("aw repo migrate accepts only --dry-run"));
     };
     if scope != "repo" {
         return Err(AwError::usage(format!(
@@ -49,7 +47,7 @@ pub fn run_migrate(args: &[String]) -> Result<i32> {
     let dry_run = match rest {
         [] => false,
         [flag] if flag == "--dry-run" => true,
-        _ => return Err(AwError::usage("aw migrate repo accepts only --dry-run")),
+        _ => return Err(AwError::usage("aw repo migrate accepts only --dry-run")),
     };
 
     let root = std::env::current_dir()?;
@@ -77,7 +75,7 @@ fn ensure_agents_bundle(root: &Path) -> Result<()> {
         return Ok(());
     }
     Err(AwError::new(
-        "aw migrate repo failed: missing infra/agent-workspace/agents/.agents/AGENTS.md",
+        "aw repo migrate failed: missing infra/agent-workspace/agents/.agents/AGENTS.md",
         1,
     ))
 }
@@ -149,7 +147,7 @@ fn ensure_symlink(root: &Path, link: &str, target: &str, dry_run: bool) -> Resul
     }
     if fs::symlink_metadata(&path).is_ok() {
         return Err(AwError::new(
-            format!("aw migrate repo blocked: {} already exists", link),
+            format!("aw repo migrate blocked: {} already exists", link),
             1,
         ));
     }
@@ -183,7 +181,7 @@ fn symlink(target: &str, link: &Path) -> Result<()> {
 #[cfg(not(unix))]
 fn symlink(_target: &str, _link: &Path) -> Result<()> {
     Err(AwError::new(
-        "aw migrate repo failed: symlink creation is only supported on Unix",
+        "aw repo migrate failed: symlink creation is only supported on Unix",
         1,
     ))
 }

@@ -328,6 +328,8 @@ fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
             "FAKE_ZELLIJ_ORDER_ARGS",
             home.root.join("default-order.txt"),
         )
+        .env_remove("ZELLIJ")
+        .env_remove("ZELLIJ_SESSION_NAME")
         .output()
         .expect("frontend launch");
     assert_success("frontend launch", &output);
@@ -344,6 +346,8 @@ fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
         .current_dir(&project)
         .env("FAKE_ZELLIJ_TABS", &tabs)
         .env("FAKE_ZELLIJ_ORDER_ARGS", home.root.join("extra-order.txt"))
+        .env_remove("ZELLIJ")
+        .env_remove("ZELLIJ_SESSION_NAME")
         .output()
         .expect("extra launch");
     assert_success("extra launch", &output);

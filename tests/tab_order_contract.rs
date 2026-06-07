@@ -160,6 +160,7 @@ panes {
         ])
         .env("XDG_CACHE_HOME", tmp.path())
         .env("ZELLIJ_SESSION_TAB_ORDER_SAVED_ONLY", "1")
+        .env_remove("ZELLIJ_SESSION_TAB_ORDER_STRICT")
         .output()
         .expect("run saved order");
     assert_success("saved order", &output);
@@ -228,6 +229,7 @@ panes {
         .env("FAKE_ZELLIJ_TABS", &live_state)
         .env("XDG_CACHE_HOME", tmp.join("live-cache"))
         .env("ZELLIJ_SESSION_TAB_ORDER_CREATE_MISSING", "1")
+        .env_remove("ZELLIJ_SESSION_TAB_ORDER_STRICT")
         .output()
         .expect("run live order");
     assert_success("live order", &output);

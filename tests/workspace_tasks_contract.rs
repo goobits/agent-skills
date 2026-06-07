@@ -18,7 +18,7 @@ fn cleanup_generated_reports_and_deletes_explicit_categories() {
     std::fs::create_dir_all(repo.join("crate/target")).unwrap();
 
     let dry = Command::new(support::command::aw())
-        .args(["workspace", "cleanup-generated"])
+        .args(["repo", "clean"])
         .current_dir(repo.path())
         .output()
         .expect("cleanup dry");
@@ -29,7 +29,7 @@ fn cleanup_generated_reports_and_deletes_explicit_categories() {
     assert!(repo.join(".turbo").exists());
 
     let delete = Command::new(support::command::aw())
-        .args(["workspace", "cleanup-generated", "--generated", "--delete"])
+        .args(["repo", "clean", "--generated", "--delete"])
         .current_dir(repo.path())
         .output()
         .expect("cleanup delete");
@@ -43,7 +43,7 @@ fn cleanup_generated_reports_and_deletes_explicit_categories() {
 fn cleanup_generated_rejects_unknown_options() {
     let repo = TempDir::new("workspace-cleanup-bad");
     let output = Command::new(support::command::aw())
-        .args(["workspace", "cleanup-generated", "--surprise"])
+        .args(["repo", "clean", "--surprise"])
         .current_dir(repo.path())
         .output()
         .expect("cleanup bad");
@@ -53,9 +53,9 @@ fn cleanup_generated_rejects_unknown_options() {
 #[test]
 fn brush_api_worktree_help_is_native() {
     let output = Command::new(support::command::aw())
-        .args(["brush-api", "worktree", "--help"])
+        .args(["repo", "worktree", "--help"])
         .output()
         .expect("brush help");
     assert_success("brush help", &output);
-    assert!(stdout(&output).contains("Usage: aw brush-api worktree"));
+    assert!(stdout(&output).contains("Usage: aw repo worktree"));
 }

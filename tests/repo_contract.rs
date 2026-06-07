@@ -15,11 +15,11 @@ fn doctor_repo_reports_ready_adapters_and_git_tab() {
     let output = home
         .command(support::command::aw())
         .current_dir(&repo)
-        .args(["doctor", "repo"])
+        .args(["repo", "doctor"])
         .output()
-        .expect("run aw doctor repo");
+        .expect("run aw repo doctor");
 
-    assert_success("aw doctor repo", &output);
+    assert_success("aw repo doctor", &output);
     let stdout = stdout(&output);
     assert!(stdout.contains("ok      .agents -> infra/agent-workspace/agents/.agents"));
     assert!(stdout.contains("ok      lowercase git tab"));
@@ -49,11 +49,11 @@ fn migrate_repo_creates_current_adapters() {
     let output = home
         .command(support::command::aw())
         .current_dir(&repo)
-        .args(["migrate", "repo"])
+        .args(["repo", "migrate"])
         .output()
-        .expect("run aw migrate repo");
+        .expect("run aw repo migrate");
 
-    assert_success("aw migrate repo", &output);
+    assert_success("aw repo migrate", &output);
     assert!(repo
         .join("infra/agent-workspace/agents/.agents/AGENTS.md")
         .is_file());
@@ -73,10 +73,10 @@ fn migrate_repo_creates_current_adapters() {
     let doctor = home
         .command(support::command::aw())
         .current_dir(&repo)
-        .args(["doctor", "repo"])
+        .args(["repo", "doctor"])
         .output()
-        .expect("run doctor after migrate");
-    assert_success("aw doctor repo after migrate", &doctor);
+        .expect("run repo doctor after migrate");
+    assert_success("aw repo doctor after migrate", &doctor);
 }
 
 fn write_ready_repo(repo: &Path) {

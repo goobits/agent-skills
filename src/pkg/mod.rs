@@ -68,8 +68,8 @@ fn print_lock_info() -> Result<i32> {
 fn print_usage() {
     println!(
         "Usage:
-  aw pkgq lock-info
-  aw pkgq -- install --lockfile-only
-  aw pkgq -- add <package> --filter <workspace>"
+  aw owner pkg lock-info
+  aw owner pkg -- install --lockfile-only
+  aw owner pkg -- add <package> --filter <workspace>"
     );
 }

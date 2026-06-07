@@ -52,28 +52,28 @@ sessions:
 
 commit queue:
   aw commit setup [workspace] [--tab git] [--session <name>] [--agent <cmd>|--no-agent]
-  aw commit add <title> <path>... [--check <cmd>] [--summary <text>] [--root <queue-root>] [--poke [tab]] [--wait] [--timeout 10m]
+  aw commit request <title> <path>... [--check <cmd>] [--summary <text>] [--root <queue-root>] [--poke [tab]] [--wait] [--timeout 10m]
   aw commit status [--root <queue-root>]
   aw commit doctor [--root <queue-root>]
   aw commit wait <id> [--root <queue-root>] [--timeout 10m]
   aw commit poke [tab] [--root <queue-root>]
 
-owner queues:
-  aw gitq <owner-git-command>
-  aw pkgq <pnpm-args...>
+repo maintenance:
+  aw repo doctor
+  aw repo migrate [--dry-run]
+  aw repo clean [--delete] [--generated|--rust-targets|--nested-node-modules|--all-safe|--build-outputs|--preprocessed]
+  aw repo measure-git [path]
+  aw repo probe-git-config [--path path] [--apply]
+  aw repo worktree <path> [--branch name] [--base ref]
 
-workspace tasks:
-  aw workspace cleanup-generated
-  aw workspace measure-git [path]
-  aw workspace probe-git-config [--path path] [--apply]
-  aw brush-api worktree <path> [--branch name] [--base ref]
+owner internals:
+  aw owner git <owner-git-command>
+  aw owner pkg <pnpm-args...>
 
 system:
   aw install [--repo] [--config <profile-dir>] [--dry-run]
   aw setup --config <profile-dir>
   aw doctor [--config <profile-dir>]
-  aw doctor repo
-  aw migrate repo [--dry-run]
   aw help
 "#;
 
@@ -119,6 +119,8 @@ pub fn run(args: Vec<String>) -> Result<i32> {
         }
         "tab" => run_tab_command(&args[1..]),
         "commit" => run_commit_command(&args[1..]),
+        "owner" => run_owner_command(&args[1..]),
+        "repo" => run_repo_command(&args[1..]),
         "gitq" => git_queue::run(&args[1..]),
         "pkgq" => package_queue::run(&args[1..]),
         "workspace" => workspace_tasks::run(&args[1..]),
@@ -164,6 +166,36 @@ pub fn run(args: Vec<String>) -> Result<i32> {
                 run_launch(other, &args[1..])
             }
         }
+    }
+}
+
+fn run_owner_command(args: &[String]) -> Result<i32> {
+    let Some((command, rest)) = args.split_first() else {
+        return Err(AwError::usage("aw: owner requires git or pkg"));
+    };
+    match command.as_str() {
+        "git" => git_queue::run(rest),
+        "pkg" => package_queue::run(rest),
+        other => Err(AwError::usage(format!("aw: unknown owner command {other}"))),
+    }
+}
+
+fn run_repo_command(args: &[String]) -> Result<i32> {
+    let Some((command, rest)) = args.split_first() else {
+        return Err(AwError::usage("aw: repo requires a command"));
+    };
+    match command.as_str() {
+        "doctor" => repo_tasks::run_doctor(rest),
+        "migrate" => {
+            let mut migrate_args = vec!["repo".to_string()];
+            migrate_args.extend(rest.iter().cloned());
+            repo_tasks::run_migrate(&migrate_args)
+        }
+        "clean" => workspace_tasks::run_named("cleanup-generated", rest),
+        "measure-git" => workspace_tasks::run_named("measure-git", rest),
+        "probe-git-config" => workspace_tasks::run_named("probe-git-config", rest),
+        "worktree" => brush_worktree::run(rest),
+        other => Err(AwError::usage(format!("aw: unknown repo command {other}"))),
     }
 }
 

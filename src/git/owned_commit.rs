@@ -95,7 +95,7 @@ fn commit_owned_inner(
     }
     let status = run_git_status(&commit_args, repo_root, false)?;
     if status == 0 {
-        eprintln!("Committed owned paths. Remaining worktree changes were not scanned; run `aw gitq status` if needed.");
+        eprintln!("Committed owned paths. Remaining worktree changes were not scanned; run `aw owner git status` if needed.");
     }
     Ok(status)
 }
@@ -387,7 +387,7 @@ fn ensure_index_looks_sane(repo_root: &Path) -> Result<bool> {
     )?);
     if head_count > 0 && (index_count == 0 || (head_count >= 20 && index_count < head_count / 2)) {
         eprintln!("Refusing to commit because the index looks corrupt ({index_count} entries, HEAD has {head_count}).");
-        eprintln!("Run `aw gitq repair-index` first. If submodules are dirty, run `aw gitq repair-index --recursive`.");
+        eprintln!("Run `aw owner git repair-index` first. If submodules are dirty, run `aw owner git repair-index --recursive`.");
         return Ok(false);
     }
     Ok(true)

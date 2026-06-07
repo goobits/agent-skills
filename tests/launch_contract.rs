@@ -216,6 +216,7 @@ fn zwork_orders_tabs_refuses_cross_session_and_repairs_shell_paths() {
         .env("XDG_CACHE_HOME", &repair_cache)
         .env("SHELL", &repair_shell)
         .env("ZELLIJ", "")
+        .env_remove("ZELLIJ_SESSION_NAME")
         .env("ZELLIJ_REPAIR_BROKEN_SHELL", "/missing/zsh")
         .env(
             "FAKE_ZELLIJ_LAUNCH_ARGS",
