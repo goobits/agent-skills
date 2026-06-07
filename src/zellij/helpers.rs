@@ -209,6 +209,9 @@ fn launch_session(
         env::set_var("ZELLIJ_SESSION_NAME", session);
         let _ = watcher_command(&["--start".to_string()]);
     }
+    if inside_zellij && current_session == session {
+        return Ok(0);
+    }
     if inside_zellij {
         return zellij_passthrough(&[
             "action",
@@ -389,6 +392,7 @@ fn doctor(config_dir: &str) -> Result<i32> {
     }
     check_file(&home_dir().join(".config/aw/config.kdl"), &mut failures);
     check_exec(&local_bin.join("aw"), &mut failures);
+    check_exec(&local_bin.join("goob"), &mut failures);
     for executable in [
         "zwork",
         "zellij-launch-session",

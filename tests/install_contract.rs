@@ -22,7 +22,7 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
         "Installed Agent Workspace setup.\nOpen a new shell or run: export PATH=\"$HOME/.local/bin:$PATH\"\nIn a project directory, create a profile with: aw main=app,server,infra,scratch\nThen open a workspace with: aw main"
     );
 
-    for executable in ["aw", ".zellij-new-scratch-tab"] {
+    for executable in ["aw", "goob", ".zellij-new-scratch-tab"] {
         assert!(home.home.join(".local/bin").join(executable).is_file());
     }
 

@@ -330,6 +330,7 @@ fn install_files() -> Result<()> {
         copy_executable(&source_binary, &internal_bin.join(target))?;
     }
     copy_executable(&source_binary, &local_bin.join("aw"))?;
+    copy_executable(&source_binary, &local_bin.join("goob"))?;
     copy_executable(&source_binary, &local_bin.join(".zellij-new-scratch-tab"))?;
 
     for executable in INTERNAL_EXECUTABLES {

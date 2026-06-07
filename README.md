@@ -293,10 +293,11 @@ scroll focus.
 ## 🧰 Under The Hood
 
 `aw` is built from the Rust crate in `infra/agent-workspace` and
-installed with the Zellij helper bundle. The installer puts only the public
-command into `~/.local/bin/`. Treat this as the public interface:
+installed with the Zellij helper bundle. The installer puts only public
+commands into `~/.local/bin/`. Treat these as the public interface:
 
 - `aw`
+- `goob` compatibility alias
 
 The Rust `aw` binary is also installed under private helper names in
 `~/.local/share/agent-workspace/bin/`:
