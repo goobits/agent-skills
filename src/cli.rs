@@ -9,10 +9,9 @@ use crate::installer::{install_repo_adapters, install_workspace_setup};
 use crate::package_queue;
 use crate::paths::{current_dir, path_string, resolve_root, validate_name};
 use crate::profile::{
-    add_profile_workspace, auto_install_config, create_initial_profile,
-    default_workspace_from_config, find_config_dir, install_profile, list_workspaces,
-    profile_dir_from_installed_default, remove_profile_workspace, replace_profile_workspace,
-    resolve_config_arg, resolve_profile_name, workspace_exists_or_exit,
+    add_profile_workspace, auto_install_config, create_initial_profile, find_config_dir,
+    install_profile, list_workspaces, profile_dir_from_installed_default, remove_profile_workspace,
+    replace_profile_workspace, resolve_config_arg, resolve_profile_name, workspace_exists_or_exit,
 };
 use crate::repo_tasks;
 use crate::tabs::{
@@ -28,7 +27,7 @@ use crate::zellij::{
 pub const USAGE: &str = r#"aw: Zero-friction Zellij workspaces
 
 usage:
-  aw                                open the default workspace
+  aw                                show help
   aw <workspace> [-s <session>] [-r <root>]
 
 workspaces:
@@ -85,7 +84,10 @@ pub fn run(args: Vec<String>) -> Result<i32> {
             print!("{}", USAGE);
             Ok(0)
         }
-        "" => run_default(),
+        "" => {
+            print!("{}", USAGE);
+            Ok(0)
+        }
         "install" => run_install(&args[1..]),
         "setup" => {
             let config_dir = resolve_config_arg(&args[1..])?;
@@ -176,17 +178,6 @@ fn run_brush_api_command(args: &[String]) -> Result<i32> {
             other
         ))),
     }
-}
-
-fn run_default() -> Result<i32> {
-    if let Some(config_dir) = auto_install_config()? {
-        let default_workspace = default_workspace_from_config(&config_dir);
-        if !default_workspace.is_empty() {
-            return run_launch(&default_workspace, &[]);
-        }
-    }
-    print!("{}", USAGE);
-    Ok(0)
 }
 
 fn run_install(args: &[String]) -> Result<i32> {

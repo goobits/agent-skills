@@ -212,6 +212,7 @@ fn launch_session(
         let _ = watcher_command(&["--start".to_string()]);
     }
     if inside_zellij && current_session == session {
+        println!("Already in session {session}");
         return Ok(0);
     }
     if inside_zellij {
@@ -250,6 +251,7 @@ fn attach_existing_session(session: &str) -> Result<i32> {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     if stderr.contains("You are trying to attach to the current session") {
+        println!("Already in session {session}");
         return Ok(0);
     }
     io::stdout().write_all(&output.stdout)?;

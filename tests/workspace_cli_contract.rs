@@ -10,6 +10,29 @@ fn install_test_aw(name: &str) -> TestHome {
     fake_zellij::installed_home(name)
 }
 
+#[test]
+fn bare_aw_shows_help_instead_of_launching_default_workspace() {
+    let home = install_test_aw("workspace-help");
+    let project = home.root.join("project");
+    let profile = project.join("config/aw");
+    std::fs::create_dir_all(&profile).unwrap();
+    temp::write(
+        profile.join("profile.conf"),
+        "name=my-site\nroot=/tmp/project\ndefault_workspace=frontend\ndefault_workspaces=frontend\n",
+    );
+    temp::write(profile.join("frontend.tabs"), "app\nui\nscratch\n");
+
+    let output = home
+        .aw_command()
+        .current_dir(&project)
+        .env("FAKE_ZELLIJ_FAIL_ON_ATTACH", "1")
+        .output()
+        .expect("run bare aw");
+    assert_success("bare aw", &output);
+    assert!(stdout(&output).contains("aw: Zero-friction Zellij workspaces"));
+    assert!(stdout(&output).contains("aw                                show help"));
+}
+
 fn run_in_project(
     home: &TestHome,
     project: &std::path::Path,
@@ -298,6 +321,7 @@ fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
 
     let output = home
         .aw_command()
+        .arg("frontend")
         .current_dir(&project)
         .env("FAKE_ZELLIJ_TABS", &tabs)
         .env(
@@ -305,8 +329,8 @@ fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
             home.root.join("default-order.txt"),
         )
         .output()
-        .expect("default launch");
-    assert_success("default launch", &output);
+        .expect("frontend launch");
+    assert_success("frontend launch", &output);
     assert!(stdout(&output).is_empty());
     assert_eq!(
         read(home.root.join("default-order.txt")).trim_end(),

@@ -80,13 +80,13 @@ When a project has `config/aw/`, `aw` auto-detects it. You do not need to
 manually link or install profiles for normal repos.
 
 ```bash
-# Open the default workspace
+# Show available commands
 aw
 
 # Open a specific workspace
 aw front
 
-# Show available commands
+# Same as bare aw
 aw help
 
 # Create, add, or replace a local workspace, then sync a matching session
