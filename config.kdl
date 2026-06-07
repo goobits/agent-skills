@@ -6,6 +6,7 @@ auto_layout true
 session_serialization true
 serialize_pane_viewport true
 serialization_interval 10
+mirror_session true
 post_command_discovery_hook "printf '%s\n' \"${SHELL:-sh}\""
 scroll_buffer_size 50000
 scrollback_editor "vim"
