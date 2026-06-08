@@ -101,6 +101,8 @@ Review:
 
 Sync:
 
+- `x-docs-honesty` (`.agents/skills/x-docs-honesty/SKILL.md`): verify docs against code, clean stale markdown, keep READMEs truthful and right-sized.
+- `x-docs-style` (`.agents/skills/x-docs-style/SKILL.md`): restyle READMEs/docs for clean, scannable, professional presentation without changing facts.
 - `x-update-changelog` (`.agents/skills/x-update-changelog/SKILL.md`): update `[Unreleased]` and cutoff marker.
 - `x-sync-docs` (`.agents/skills/x-sync-docs/SKILL.md`): sync AGENTS, skills, READMEs, proposals, runbooks, stale refs.
 
