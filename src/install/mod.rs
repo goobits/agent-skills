@@ -330,13 +330,16 @@ fn install_files() -> Result<()> {
         copy_executable(&source_binary, &internal_bin.join(target))?;
     }
     copy_executable(&source_binary, &local_bin.join("aw"))?;
-    copy_executable(&source_binary, &local_bin.join("goob"))?;
     copy_executable(&source_binary, &local_bin.join(".zellij-new-scratch-tab"))?;
 
     for executable in INTERNAL_EXECUTABLES {
         let _ = fs::remove_file(local_bin.join(executable));
     }
-    for stale in [".zellij-agent-tab-watcher", ".zellij-codex-tab-watcher"] {
+    for stale in [
+        "goob",
+        ".zellij-agent-tab-watcher",
+        ".zellij-codex-tab-watcher",
+    ] {
         let _ = fs::remove_file(local_bin.join(stale));
     }
     for stale in ["backend.kdl", "frontend.kdl"] {

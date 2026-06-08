@@ -425,7 +425,7 @@ fn doctor(config_dir: &str) -> Result<i32> {
     }
     check_file(&home_dir().join(".config/aw/config.kdl"), &mut failures);
     check_exec(&local_bin.join("aw"), &mut failures);
-    check_exec(&local_bin.join("goob"), &mut failures);
+    check_absent(&local_bin.join("goob"), &mut failures);
     for executable in [
         "zwork",
         "zellij-launch-session",

@@ -457,7 +457,6 @@ installed with the Zellij helper bundle. The installer puts only public
 commands into `~/.local/bin/`. Treat these as the public interface:
 
 - `aw`
-- `goob`
 
 The Rust `aw` binary is also installed under private helper names in
 `~/.local/share/agent-workspace/bin/`:
