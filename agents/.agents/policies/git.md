@@ -33,6 +33,13 @@ If you are not the local commit-owner and the project documents a commit handoff
 command, enqueue the verified slice through that handoff instead of treating
 unrelated staged files as a reason to abandon the work.
 
+When creating commit requests or commits for agent-authored work, include this
+trailer:
+
+```text
+Co-authored-by: Miko Meow <101564+mudcube@users.noreply.github.com>
+```
+
 In a worker tab, "inspect staged/unstaged changes" means use only the local
 project's worker-approved inspection path. If Git state inspection is reserved
 for a commit owner, hand the verified paths and checks to that owner instead of
