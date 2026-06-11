@@ -92,6 +92,7 @@ Audit:
 - `x-hardening-audit` (`.agents/skills/x-hardening-audit/SKILL.md`): final cleanup, LOC reduction, cruft, scope creep.
 - `x-push-audit` (`.agents/skills/x-push-audit/SKILL.md`): committed secrets, private files, generated artifacts, push blockers.
 - `x-test-audit` (`.agents/skills/x-test-audit/SKILL.md`): test coverage, placement, quality, duplication, missing behavior.
+- `x-trim-code` (`.agents/skills/x-trim-code/SKILL.md`): target-scoped LOC reduction, clean boundaries, no duplicate code, visual parity.
 
 Review:
 
