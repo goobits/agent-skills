@@ -166,6 +166,26 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
         .unwrap();
     assert_failure("bad done", &bad_done);
     assert!(support::command::stderr(&bad_done).contains("aw: commit done requires a request id"));
+    let extra_done = home
+        .aw_command()
+        .args(["commit", "done", "one", "two"])
+        .current_dir(&project)
+        .output()
+        .unwrap();
+    assert_failure("extra done", &extra_done);
+    let extra_done_stderr = support::command::stderr(&extra_done);
+    assert!(extra_done_stderr.contains("aw: commit done got an extra argument: two"));
+    assert!(!extra_done_stderr.contains("commitq:"));
+    let extra_wait = home
+        .aw_command()
+        .args(["commit", "wait", "one", "two"])
+        .current_dir(&project)
+        .output()
+        .unwrap();
+    assert_failure("extra wait", &extra_wait);
+    let extra_wait_stderr = support::command::stderr(&extra_wait);
+    assert!(extra_wait_stderr.contains("aw: commit wait got an extra argument: two"));
+    assert!(!extra_wait_stderr.contains("commitq:"));
     let bad_block = home
         .aw_command()
         .args(["commit", "block", "missing"])

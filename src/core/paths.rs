@@ -114,6 +114,10 @@ pub fn resolve_root(path: &str) -> Result<PathBuf> {
 }
 
 pub fn validate_name(kind: &str, value: &str) -> Result<()> {
+    if value.is_empty() {
+        return Err(AwError::new(format!("aw: {kind} name cannot be empty"), 2));
+    }
+
     if value
         .chars()
         .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))

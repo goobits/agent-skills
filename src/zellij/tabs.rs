@@ -5,7 +5,7 @@ use crate::error::{AwError, Result};
 use crate::paths::validate_name;
 
 #[derive(Clone, Debug)]
-pub struct IndexedTab {
+pub(crate) struct IndexedTab {
     pub name: String,
     pub index: Option<usize>,
 }
@@ -44,7 +44,7 @@ pub fn parse_tabs_args(args: &[String]) -> Result<Vec<String>> {
     Ok(args.to_vec())
 }
 
-pub fn parse_indexed_tab_spec(spec: &str) -> Result<IndexedTab> {
+pub(crate) fn parse_indexed_tab_spec(spec: &str) -> Result<IndexedTab> {
     if let Some((name, index)) = spec.rsplit_once('@') {
         if name.is_empty() {
             return Err(AwError::new(
@@ -59,7 +59,12 @@ pub fn parse_indexed_tab_spec(spec: &str) -> Result<IndexedTab> {
             ));
         }
         validate_name("tab", name)?;
-        let index = index.parse::<usize>().unwrap_or(usize::MAX);
+        let index = index.parse::<usize>().map_err(|_| {
+            AwError::new(
+                format!("aw: tab index is too large, for example {name}@1"),
+                2,
+            )
+        })?;
         return Ok(IndexedTab {
             name: name.to_string(),
             index: Some(index),
@@ -98,7 +103,7 @@ pub fn read_tab_lines(tabs_file: &Path) -> Result<Vec<String>> {
         .collect())
 }
 
-pub fn upsert_workspace_tab_line(tabs_file: &Path, spec: &str) -> Result<IndexedTab> {
+pub(crate) fn upsert_workspace_tab_line(tabs_file: &Path, spec: &str) -> Result<IndexedTab> {
     let indexed = parse_indexed_tab_spec(spec)?;
     let mut existing_line = None;
     let mut next_lines = Vec::new();

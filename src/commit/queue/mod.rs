@@ -264,9 +264,9 @@ fn parse_move_args(args: &[String], action: &str) -> Result<MoveInput> {
                     input.id = other.to_string();
                     index += 1;
                 } else {
-                    return Err(AwError::new(
-                        format!("commitq: unexpected argument: {other}"),
-                        1,
+                    return Err(commit_action_usage(
+                        format!("aw: commit {action} got an extra argument: {other}"),
+                        action,
                     ));
                 }
             }
@@ -313,16 +313,19 @@ fn parse_wait_args(args: &[String]) -> Result<(Option<String>, String, Duration,
                 index += 1;
             }
             other if other.starts_with("--") => {
-                return Err(AwError::new(format!("commitq: unknown option: {other}"), 1));
+                return Err(commit_action_usage(
+                    format!("aw: unknown commit wait option {other}"),
+                    "wait",
+                ));
             }
             other => {
                 if id.is_empty() {
                     id = other.to_string();
                     index += 1;
                 } else {
-                    return Err(AwError::new(
-                        format!("commitq: unexpected argument: {other}"),
-                        1,
+                    return Err(commit_action_usage(
+                        format!("aw: commit wait got an extra argument: {other}"),
+                        "wait",
                     ));
                 }
             }

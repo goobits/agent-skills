@@ -338,6 +338,23 @@ fn malformed_tab_and_launch_commands_report_scoped_usage() {
         "tools\nkeyboard\nscratch\n"
     );
 
+    let huge_index = "keyboard@999999999999999999999999999999999999999";
+    let bad_huge_index = run_in_project(&home, &project, &["front", "tab", "move", huge_index]);
+    assert_failure("bad huge tab index", &bad_huge_index);
+    assert!(stderr(&bad_huge_index).contains("tab index is too large"));
+    assert_eq!(
+        read(profile.join("front.tabs")),
+        "tools\nkeyboard\nscratch\n"
+    );
+
+    let empty_add = run_in_project(&home, &project, &["front", "tab", "add", ""]);
+    assert_failure("empty tab add", &empty_add);
+    assert!(stderr(&empty_add).contains("tab name cannot be empty"));
+    assert_eq!(
+        read(profile.join("front.tabs")),
+        "tools\nkeyboard\nscratch\n"
+    );
+
     let missing_session = run_in_project(&home, &project, &["front", "--session"]);
     assert_failure("missing launch session", &missing_session);
     assert!(stderr(&missing_session).contains("--session requires a session name"));
