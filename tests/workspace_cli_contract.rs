@@ -208,6 +208,95 @@ fn tab_rename_preserves_live_tab_instead_of_recreating_it() {
 }
 
 #[test]
+fn tab_commands_infer_the_only_workspace() {
+    let home = install_test_aw("workspace-tab-shorthand");
+    let project = home.root.join("project");
+    let profile = project.join("config/aw");
+    std::fs::create_dir_all(&profile).unwrap();
+    temp::write(
+        profile.join("profile.conf"),
+        &format!(
+            "name=project\nroot={}\ndefault_workspace=front\ndefault_workspaces=front\n",
+            project.display()
+        ),
+    );
+    temp::write(profile.join("front.tabs"), "tools\nkeyboard\nscratch\n");
+
+    let tabs = home.root.join("tabs.tsv");
+    temp::write(
+        &tabs,
+        "0\t0\tfalse\ttools\n1\t1\ttrue\tkeyboard\n2\t2\tfalse\tscratch\n",
+    );
+
+    let output = home
+        .aw_command()
+        .args(["tab", "list"])
+        .current_dir(&project)
+        .env("FAKE_ZELLIJ_TABS", &tabs)
+        .output()
+        .expect("tab list shorthand");
+    assert_success("tab list shorthand", &output);
+    assert_eq!(stdout(&output), "  0 tools\n* 1 keyboard\n  2 scratch");
+
+    let output = home
+        .aw_command()
+        .args(["tab", "list", "front"])
+        .current_dir(&project)
+        .env("FAKE_ZELLIJ_TABS", &tabs)
+        .output()
+        .expect("legacy tab list");
+    assert_success("legacy tab list", &output);
+
+    for (args, expected_tabs, order_file) in [
+        (
+            vec!["tab", "add", "search@1"],
+            "tools\nsearch\nkeyboard\nscratch\n",
+            "shorthand-add-order.txt",
+        ),
+        (
+            vec!["tab", "move", "keyboard@1"],
+            "tools\nkeyboard\nsearch\nscratch\n",
+            "shorthand-move-order.txt",
+        ),
+        (
+            vec!["tab", "rename", "keyboard", "keys"],
+            "tools\nkeys\nsearch\nscratch\n",
+            "shorthand-rename-order.txt",
+        ),
+        (
+            vec!["tab", "remove", "keys"],
+            "tools\nsearch\nscratch\n",
+            "shorthand-remove-order.txt",
+        ),
+    ] {
+        let output = home
+            .aw_command()
+            .args(args)
+            .current_dir(&project)
+            .env("FAKE_ZELLIJ_TABS", &tabs)
+            .env("FAKE_ZELLIJ_ORDER_ARGS", home.root.join(order_file))
+            .output()
+            .expect("tab edit shorthand");
+        assert_success("tab edit shorthand", &output);
+        assert_eq!(read(profile.join("front.tabs")), expected_tabs);
+    }
+
+    let output = home
+        .aw_command()
+        .args(["tab", "refresh"])
+        .current_dir(&project)
+        .env("FAKE_ZELLIJ_TABS", &tabs)
+        .env(
+            "FAKE_ZELLIJ_ORDER_ARGS",
+            home.root.join("shorthand-refresh-order.txt"),
+        )
+        .output()
+        .expect("tab refresh shorthand");
+    assert_success("tab refresh shorthand", &output);
+    assert_eq!(stdout(&output), "Converged workspace front.");
+}
+
+#[test]
 fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
     let home = install_test_aw("workspace-cli");
     let project = home.root.join("project");
@@ -494,6 +583,19 @@ fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
         .expect("front refresh");
     assert_success("front refresh", &output);
     assert_eq!(stdout(&output), "Converged workspace front.");
+
+    let output = home
+        .aw_command()
+        .args(["tab", "rename", "keyboard", "keys"])
+        .current_dir(&project)
+        .env("FAKE_ZELLIJ_TABS", &tabs)
+        .output()
+        .expect("ambiguous tab shorthand");
+    assert_failure("ambiguous tab shorthand", &output);
+    assert!(
+        stderr(&output).contains("tab rename needs a workspace because multiple workspaces exist")
+    );
+    assert!(stderr(&output).contains("Example: aw backend tab rename"));
 
     assert_failure(
         "legacy front list",

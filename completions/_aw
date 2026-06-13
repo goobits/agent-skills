@@ -38,6 +38,21 @@ _aw_workspaces() {
   done
 }
 
+_aw_single_workspace() {
+  local config_dir tabs_file workspace single count
+  config_dir="$(_aw_config_dir)"
+  [[ -d "$config_dir" ]] || return
+
+  count=0
+  for tabs_file in "$config_dir"/*.tabs; do
+    [[ -f "$tabs_file" ]] || continue
+    workspace="$(basename "$tabs_file" .tabs)"
+    single="$workspace"
+    count=$((count + 1))
+  done
+  [[ "$count" -eq 1 ]] && printf '%s' "$single"
+}
+
 _aw_tabs() {
   local workspace="$1" config_dir tabs_file line
   config_dir="$(_aw_config_dir)"
@@ -122,19 +137,27 @@ _aw() {
           compadd -- "${tab_commands[@]}"
           ;;
         list|refresh)
-          [[ "$CURRENT" -eq 4 ]] && _aw_workspaces
+          [[ "$CURRENT" -eq 4 && -z "$(_aw_single_workspace)" ]] && _aw_workspaces
           ;;
         add|move|remove)
-          if [[ "$CURRENT" -eq 4 ]]; then
+          local single_workspace
+          single_workspace="$(_aw_single_workspace)"
+          if [[ "$CURRENT" -eq 4 && -n "$single_workspace" ]]; then
+            _aw_tabs "$single_workspace"
+          elif [[ "$CURRENT" -eq 4 ]]; then
             _aw_workspaces
-          elif [[ "$CURRENT" -eq 5 ]]; then
+          elif [[ "$CURRENT" -eq 5 && -z "$single_workspace" ]]; then
             _aw_tabs "${words[4]}"
           fi
           ;;
         rename)
-          if [[ "$CURRENT" -eq 4 ]]; then
+          local single_workspace
+          single_workspace="$(_aw_single_workspace)"
+          if [[ "$CURRENT" -eq 4 && -n "$single_workspace" ]]; then
+            _aw_tabs "$single_workspace"
+          elif [[ "$CURRENT" -eq 4 ]]; then
             _aw_workspaces
-          elif [[ "$CURRENT" -eq 5 ]]; then
+          elif [[ "$CURRENT" -eq 5 && -z "$single_workspace" ]]; then
             _aw_tabs "${words[4]}"
           fi
           ;;

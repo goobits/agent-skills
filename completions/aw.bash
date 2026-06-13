@@ -37,6 +37,17 @@ _aw_completion() {
     done
   }
 
+  _aw_single_workspace() {
+    local workspace single count
+    count=0
+    while IFS= read -r workspace; do
+      [[ -n "$workspace" ]] || continue
+      single="$workspace"
+      count=$((count + 1))
+    done < <(_aw_workspaces)
+    [[ "$count" -eq 1 ]] && printf '%s' "$single"
+  }
+
   _aw_tabs() {
     local workspace="$1" dir tabs_file
     dir="$(_aw_config_dir)"
@@ -114,19 +125,29 @@ _aw_completion() {
           COMPREPLY=( $(compgen -W "list add move rename remove refresh" -- "$cur") )
           ;;
         list|refresh)
-          [[ "$COMP_CWORD" -eq 3 ]] && COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
+          if [[ "$COMP_CWORD" -eq 3 && -z "$(_aw_single_workspace)" ]]; then
+            COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
+          fi
           ;;
         add|move|remove)
-          if [[ "$COMP_CWORD" -eq 3 ]]; then
+          local single_workspace
+          single_workspace="$(_aw_single_workspace)"
+          if [[ "$COMP_CWORD" -eq 3 && -n "$single_workspace" ]]; then
+            COMPREPLY=( $(compgen -W "$(_aw_tabs "$single_workspace")" -- "$cur") )
+          elif [[ "$COMP_CWORD" -eq 3 ]]; then
             COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 4 ]]; then
+          elif [[ "$COMP_CWORD" -eq 4 && -z "$single_workspace" ]]; then
             COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[3]}")" -- "$cur") )
           fi
           ;;
         rename)
-          if [[ "$COMP_CWORD" -eq 3 ]]; then
+          local single_workspace
+          single_workspace="$(_aw_single_workspace)"
+          if [[ "$COMP_CWORD" -eq 3 && -n "$single_workspace" ]]; then
+            COMPREPLY=( $(compgen -W "$(_aw_tabs "$single_workspace")" -- "$cur") )
+          elif [[ "$COMP_CWORD" -eq 3 ]]; then
             COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 4 ]]; then
+          elif [[ "$COMP_CWORD" -eq 4 && -z "$single_workspace" ]]; then
             COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[3]}")" -- "$cur") )
           fi
           ;;

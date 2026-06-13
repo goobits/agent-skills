@@ -147,6 +147,17 @@ aw front tab remove keyboard
 aw front tab refresh
 ```
 
+When a profile has exactly one workspace, `aw tab` can infer it:
+
+```bash
+aw tab list
+aw tab add keyboard@1
+aw tab move keyboard@2
+aw tab rename keyboard keys
+aw tab remove keys
+aw tab refresh
+```
+
 `aw refresh <workspace>` converges a live session back to its `*.tabs` file:
 missing tabs are created, duplicate or out-of-profile tabs are removed, and
 configured tabs return to saved order.

@@ -43,6 +43,12 @@ workspaces:
   aw <workspace>=<tab>,...          create, add, replace, and sync a workspace
 
 tabs:
+  aw tab list                    shorthand when exactly one workspace exists
+  aw tab add <tab[@index]>       shorthand when exactly one workspace exists
+  aw tab move <tab@index>        shorthand when exactly one workspace exists
+  aw tab rename <old-tab> <new-tab>
+  aw tab remove <tab>            shorthand when exactly one workspace exists
+  aw tab refresh                 shorthand when exactly one workspace exists
   aw <workspace> tab list
   aw <workspace> tab add <tab[@index]>
   aw <workspace> tab move <tab@index>
@@ -408,39 +414,80 @@ fn run_list(args: &[String]) -> Result<i32> {
 
 fn run_tab_command(args: &[String]) -> Result<i32> {
     let action = args.first().map(String::as_str).unwrap_or("");
-    let workspace = args.get(1).map(String::as_str).unwrap_or("");
-    if action.is_empty() || workspace.is_empty() {
-        return Err(AwError::usage("aw: tab requires an action and workspace"));
+    if action.is_empty() {
+        return Err(AwError::usage("aw: tab requires an action"));
     }
 
     match action {
         "list" | "refresh" => {
+            if args.len() == 1 {
+                let workspace = infer_single_tab_workspace(action)?;
+                return run_workspace_tab_command(&workspace, action, &[]);
+            }
             if args.len() != 2 {
                 return Err(AwError::usage(format!(
-                    "aw: tab {} requires exactly one workspace",
+                    "aw: tab {} accepts either no workspace shorthand or exactly one workspace",
                     action
                 )));
             }
+            let workspace = args.get(1).map(String::as_str).unwrap_or("");
             run_workspace_tab_command(workspace, action, &[])
         }
         "add" | "move" | "remove" => {
+            if args.len() == 2 {
+                let workspace = infer_single_tab_workspace(action)?;
+                return run_workspace_tab_command(&workspace, action, &args[1..]);
+            }
             if args.len() != 3 {
                 return Err(AwError::usage(format!(
-                    "aw: tab {} requires a workspace and tab",
+                    "aw: tab {} requires a tab shorthand or workspace and tab",
                     action
                 )));
             }
+            let workspace = args.get(1).map(String::as_str).unwrap_or("");
             run_workspace_tab_command(workspace, action, &args[2..])
         }
         "rename" => {
+            if args.len() == 3 {
+                let workspace = infer_single_tab_workspace(action)?;
+                return run_workspace_tab_command(&workspace, action, &args[1..]);
+            }
             if args.len() != 4 {
                 return Err(AwError::usage(
-                    "aw: tab rename requires a workspace, old tab, and new tab",
+                    "aw: tab rename requires old and new tab shorthand or workspace, old tab, and new tab",
                 ));
             }
+            let workspace = args.get(1).map(String::as_str).unwrap_or("");
             run_workspace_tab_command(workspace, action, &args[2..])
         }
         other => Err(AwError::usage(format!("aw: unknown tab action {}", other))),
+    }
+}
+
+fn infer_single_tab_workspace(action: &str) -> Result<String> {
+    let Some(config_dir) = find_config_dir() else {
+        return Err(AwError::new(
+            "aw: could not find config/aw; create a workspace first",
+            1,
+        ));
+    };
+    let workspaces = list_workspaces(&config_dir)?;
+    match workspaces.as_slice() {
+        [workspace] => Ok(workspace.clone()),
+        [] => Err(AwError::new(
+            "aw: tab shorthand needs one workspace, but no workspaces exist",
+            1,
+        )),
+        _ => Err(AwError::new(
+            format!(
+                "aw: tab {} needs a workspace because multiple workspaces exist\nAvailable workspaces:\n{}\nExample: aw {} tab {}",
+                action,
+                workspaces.join("\n"),
+                workspaces[0],
+                action
+            ),
+            2,
+        )),
     }
 }
 
