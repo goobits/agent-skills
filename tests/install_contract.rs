@@ -284,6 +284,25 @@ fn install_repo_rejects_external_config_before_partial_setup() {
 }
 
 #[test]
+fn install_config_rejects_missing_value_before_setup() {
+    let home = TestHome::new("install-missing-config-value");
+    let repo = home.root.join("repo");
+    std::fs::create_dir_all(&repo).unwrap();
+
+    let output = home
+        .command(support::command::aw())
+        .current_dir(&repo)
+        .args(["install", "--config", "--repo"])
+        .output()
+        .expect("run install missing config value");
+
+    assert_failure("aw install --config --repo", &output);
+    assert!(stdout(&output).is_empty());
+    assert!(stderr(&output).contains("install --config requires a path"));
+    assert!(!repo.join("AGENTS.md").exists());
+}
+
+#[test]
 fn install_repo_auto_config_creates_adapters_and_profile() {
     let home = TestHome::new("install-repo-config");
     let repo = home.root.join("repo");

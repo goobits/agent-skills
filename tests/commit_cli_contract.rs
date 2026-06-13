@@ -147,6 +147,33 @@ fn commit_queue_commands_create_wait_report_and_validate_requests() {
     assert!(
         support::command::stderr(&bad_status).contains("unknown commit status argument --bogus")
     );
+    let bad_wait = home
+        .aw_command()
+        .args(["commit", "wait"])
+        .current_dir(&project)
+        .output()
+        .unwrap();
+    assert_failure("bad wait", &bad_wait);
+    let bad_wait_stderr = support::command::stderr(&bad_wait);
+    assert!(bad_wait_stderr.contains("aw: commit wait requires a request id"));
+    assert!(bad_wait_stderr.contains("aw commit wait <id>"));
+    assert!(!bad_wait_stderr.contains("commitq:"));
+    let bad_done = home
+        .aw_command()
+        .args(["commit", "done"])
+        .current_dir(&project)
+        .output()
+        .unwrap();
+    assert_failure("bad done", &bad_done);
+    assert!(support::command::stderr(&bad_done).contains("aw: commit done requires a request id"));
+    let bad_block = home
+        .aw_command()
+        .args(["commit", "block", "missing"])
+        .current_dir(&project)
+        .output()
+        .unwrap();
+    assert_failure("bad block", &bad_block);
+    assert!(support::command::stderr(&bad_block).contains("commit block requires --reason"));
 
     assert_success(
         "commit check",

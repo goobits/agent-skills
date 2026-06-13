@@ -297,6 +297,59 @@ fn tab_commands_infer_the_only_workspace() {
 }
 
 #[test]
+fn malformed_tab_and_launch_commands_report_scoped_usage() {
+    let home = install_test_aw("workspace-cli-bad-input");
+    let project = home.root.join("project");
+    let profile = project.join("config/aw");
+    std::fs::create_dir_all(&profile).unwrap();
+    temp::write(
+        profile.join("profile.conf"),
+        &format!(
+            "name=project\nroot={}\ndefault_workspace=front\ndefault_workspaces=front backend\n",
+            project.display()
+        ),
+    );
+    temp::write(profile.join("front.tabs"), "tools\nkeyboard\nscratch\n");
+    temp::write(profile.join("backend.tabs"), "api\ndb\n");
+
+    let bad_rename = run_in_project(&home, &project, &["tab", "rename", "keyboard"]);
+    assert_failure("bad tab rename", &bad_rename);
+    assert!(stderr(&bad_rename).contains("aw tab rename <old-tab> <new-tab>"));
+    assert!(!stderr(&bad_rename).contains("Zero-friction Zellij workspaces"));
+
+    let bad_workspace_list = run_in_project(&home, &project, &["front", "tab", "list", "extra"]);
+    assert_failure("bad workspace tab list", &bad_workspace_list);
+    assert!(stderr(&bad_workspace_list).contains("usage:\n  aw front tab list"));
+    assert!(!stderr(&bad_workspace_list).contains("commit queue:"));
+
+    let bad_move = run_in_project(&home, &project, &["front", "tab", "move", "keyboard"]);
+    assert_failure("bad workspace tab move", &bad_move);
+    assert!(stderr(&bad_move).contains("aw front tab move keyboard@1"));
+    assert_eq!(
+        read(profile.join("front.tabs")),
+        "tools\nkeyboard\nscratch\n"
+    );
+
+    let bad_index = run_in_project(&home, &project, &["front", "tab", "move", "keyboard@later"]);
+    assert_failure("bad tab index", &bad_index);
+    assert!(stderr(&bad_index).contains("tab index must be a number"));
+    assert_eq!(
+        read(profile.join("front.tabs")),
+        "tools\nkeyboard\nscratch\n"
+    );
+
+    let missing_session = run_in_project(&home, &project, &["front", "--session"]);
+    assert_failure("missing launch session", &missing_session);
+    assert!(stderr(&missing_session).contains("--session requires a session name"));
+    assert!(!stderr(&missing_session).contains("zwork: missing profile"));
+
+    let missing_root = run_in_project(&home, &project, &["front", "--root"]);
+    assert_failure("missing launch root", &missing_root);
+    assert!(stderr(&missing_root).contains("--root requires a path"));
+    assert!(!stderr(&missing_root).contains("root directory does not exist:"));
+}
+
+#[test]
 fn doctor_refresh_tab_edit_scratch_and_session_commands_use_aw_surface() {
     let home = install_test_aw("workspace-cli");
     let project = home.root.join("project");

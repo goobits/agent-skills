@@ -44,16 +44,26 @@ pub fn parse_tabs_args(args: &[String]) -> Result<Vec<String>> {
     Ok(args.to_vec())
 }
 
-fn indexed_tab_spec(spec: &str) -> Result<IndexedTab> {
+pub fn parse_indexed_tab_spec(spec: &str) -> Result<IndexedTab> {
     if let Some((name, index)) = spec.rsplit_once('@') {
-        if !name.is_empty() && index.chars().all(|ch| ch.is_ascii_digit()) {
-            validate_name("tab", name)?;
-            let index = index.parse::<usize>().unwrap_or(usize::MAX);
-            return Ok(IndexedTab {
-                name: name.to_string(),
-                index: Some(index),
-            });
+        if name.is_empty() {
+            return Err(AwError::new(
+                "aw: tab@index needs a tab name before @, for example keyboard@1",
+                2,
+            ));
         }
+        if index.is_empty() || !index.chars().all(|ch| ch.is_ascii_digit()) {
+            return Err(AwError::new(
+                format!("aw: tab index must be a number, for example {name}@1"),
+                2,
+            ));
+        }
+        validate_name("tab", name)?;
+        let index = index.parse::<usize>().unwrap_or(usize::MAX);
+        return Ok(IndexedTab {
+            name: name.to_string(),
+            index: Some(index),
+        });
     }
 
     validate_name("tab", spec)?;
@@ -89,7 +99,7 @@ pub fn read_tab_lines(tabs_file: &Path) -> Result<Vec<String>> {
 }
 
 pub fn upsert_workspace_tab_line(tabs_file: &Path, spec: &str) -> Result<IndexedTab> {
-    let indexed = indexed_tab_spec(spec)?;
+    let indexed = parse_indexed_tab_spec(spec)?;
     let mut existing_line = None;
     let mut next_lines = Vec::new();
 

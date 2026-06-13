@@ -39,10 +39,7 @@ pub fn run_status(action: &str, args: &[String]) -> Result<i32> {
         "done" | "block" => {
             print!(
                 "{}",
-                store::move_request(
-                    parse_move_args(args)?,
-                    if action == "done" { "done" } else { "blocked" }
-                )?
+                store::move_request(parse_move_args(args, action)?, move_state(action))?
             );
             Ok(0)
         }
@@ -74,7 +71,7 @@ pub fn capture(action: &str, args: &[String]) -> Result<String> {
             let report = store::check(root.as_deref())?;
             Ok(render_check(&report, json))
         }
-        "done" | "block" => store::move_request(parse_move_args(args)?, action),
+        "done" | "block" => store::move_request(parse_move_args(args, action)?, move_state(action)),
         _ => Err(AwError::new(
             format!("commitq: unknown command: {action}"),
             1,
@@ -219,7 +216,15 @@ fn parse_next_args(args: &[String]) -> Result<(Option<String>, bool)> {
     parse_check_args(args)
 }
 
-fn parse_move_args(args: &[String]) -> Result<MoveInput> {
+fn move_state(action: &str) -> &str {
+    if action == "done" {
+        "done"
+    } else {
+        "blocked"
+    }
+}
+
+fn parse_move_args(args: &[String], action: &str) -> Result<MoveInput> {
     let mut input = MoveInput::default();
     let mut index = 0;
     while index < args.len() {
@@ -249,7 +254,10 @@ fn parse_move_args(args: &[String]) -> Result<MoveInput> {
                 index += 2;
             }
             other if other.starts_with("--") => {
-                return Err(AwError::new(format!("commitq: unknown option: {other}"), 1));
+                return Err(AwError::new(
+                    format!("aw: unknown commit {action} option {other}"),
+                    2,
+                ));
             }
             other => {
                 if input.id.is_empty() {
@@ -263,6 +271,18 @@ fn parse_move_args(args: &[String]) -> Result<MoveInput> {
                 }
             }
         }
+    }
+    if input.id.is_empty() {
+        return Err(commit_action_usage(
+            format!("aw: commit {action} requires a request id"),
+            action,
+        ));
+    }
+    if action == "block" && input.reason.is_empty() {
+        return Err(commit_action_usage(
+            "aw: commit block requires --reason <reason>",
+            action,
+        ));
     }
     Ok(input)
 }
@@ -308,6 +328,12 @@ fn parse_wait_args(args: &[String]) -> Result<(Option<String>, String, Duration,
             }
         }
     }
+    if id.is_empty() {
+        return Err(commit_action_usage(
+            "aw: commit wait requires a request id",
+            "wait",
+        ));
+    }
     Ok((root, id, timeout, poll, json))
 }
 
@@ -315,10 +341,17 @@ fn require_value(args: &[String], index: usize) -> Result<&str> {
     let option = args[index].as_str();
     let value = args.get(index + 1).map(String::as_str).unwrap_or("");
     if value.is_empty() || value.starts_with("--") {
-        return Err(AwError::new(
-            format!("commitq: missing value for {option}"),
-            1,
-        ));
+        return Err(AwError::new(format!("aw: {option} requires a value"), 2));
     }
     Ok(value)
+}
+
+fn commit_action_usage(message: impl Into<String>, action: &str) -> AwError {
+    let usage = match action {
+        "wait" => "aw commit wait <id> [--root <queue-root>] [--timeout 10m]",
+        "done" => "aw commit done <id> [--root <queue-root>]",
+        "block" => "aw commit block <id> --reason <reason> [--root <queue-root>]",
+        _ => "aw commit <action>",
+    };
+    AwError::new(format!("{}\n\nusage:\n  {usage}", message.into()), 2)
 }
