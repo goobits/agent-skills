@@ -21,14 +21,6 @@ pub const REPO_USAGE: &str = r#"usage:
   aw repo routes [doctor] [--config path]
   aw repo worktree <path> [--branch name] [--base ref]"#;
 
-pub fn run(args: &[String]) -> Result<i32> {
-    let Some((command, rest)) = args.split_first() else {
-        print_usage();
-        return Ok(0);
-    };
-    run_named(command, rest)
-}
-
 pub fn run_named(command: &str, args: &[String]) -> Result<i32> {
     match command {
         "-h" | "--help" | "help" => {

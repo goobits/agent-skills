@@ -108,7 +108,6 @@ pub fn run(args: Vec<String>) -> Result<i32> {
         }
         "doctor" => run_doctor(&args[1..]),
         "paths" => run_paths(&args[1..]),
-        "migrate" => repo_tasks::run_migrate(&args[1..]),
         "list" => run_list(&args[1..]),
         "create" => {
             if args.len() < 3 {
@@ -136,8 +135,6 @@ pub fn run(args: Vec<String>) -> Result<i32> {
         "repo" => run_repo_command(&args[1..]),
         "gitq" => git_queue::run(&args[1..]),
         "pkgq" => package_queue::run(&args[1..]),
-        "workspace" => workspace_tasks::run(&args[1..]),
-        "brush-api" => run_brush_api_command(&args[1..]),
         "ps" => {
             if args.len() > 1 {
                 return Err(AwError::usage("aw: ps does not accept arguments"));
@@ -176,7 +173,7 @@ pub fn run(args: Vec<String>) -> Result<i32> {
                 }
                 upsert_local_workspace(other)
             } else if args.get(1).is_some_and(|arg| arg == "tab") {
-                run_workspace_first_tab_command(other, &args[2..])
+                run_tab_command_for_workspace(other, &args[2..])
             } else {
                 run_launch(other, &args[1..])
             }
@@ -206,11 +203,7 @@ fn run_repo_command(args: &[String]) -> Result<i32> {
             Ok(0)
         }
         "doctor" => repo_tasks::run_doctor(rest),
-        "migrate" => {
-            let mut migrate_args = vec!["repo".to_string()];
-            migrate_args.extend(rest.iter().cloned());
-            repo_tasks::run_migrate(&migrate_args)
-        }
+        "migrate" => repo_tasks::run_migrate(rest),
         "clean" => workspace_tasks::run_named("cleanup-generated", rest),
         "measure-git" => workspace_tasks::run_named("measure-git", rest),
         "probe-git-config" => workspace_tasks::run_named("probe-git-config", rest),
@@ -252,19 +245,6 @@ fn run_paths(args: &[String]) -> Result<i32> {
         path_string(&aw_legacy_default_profile_file())
     );
     Ok(0)
-}
-
-fn run_brush_api_command(args: &[String]) -> Result<i32> {
-    let Some((command, rest)) = args.split_first() else {
-        return Err(AwError::usage("aw: brush-api requires a command"));
-    };
-    match command.as_str() {
-        "worktree" => brush_worktree::run(rest),
-        other => Err(AwError::usage(format!(
-            "aw: unknown brush-api command {}",
-            other
-        ))),
-    }
 }
 
 fn run_install(args: &[String]) -> Result<i32> {
@@ -413,55 +393,11 @@ fn run_list(args: &[String]) -> Result<i32> {
 }
 
 fn run_tab_command(args: &[String]) -> Result<i32> {
-    let action = args.first().map(String::as_str).unwrap_or("");
-    if action.is_empty() {
+    let Some((action, rest)) = args.split_first() else {
         return Err(AwError::usage("aw: tab requires an action"));
-    }
-
-    match action {
-        "list" | "refresh" => {
-            if args.len() == 1 {
-                let workspace = infer_single_tab_workspace(action)?;
-                return run_workspace_tab_command(&workspace, action, &[]);
-            }
-            if args.len() != 2 {
-                return Err(AwError::usage(format!(
-                    "aw: tab {} accepts either no workspace shorthand or exactly one workspace",
-                    action
-                )));
-            }
-            let workspace = args.get(1).map(String::as_str).unwrap_or("");
-            run_workspace_tab_command(workspace, action, &[])
-        }
-        "add" | "move" | "remove" => {
-            if args.len() == 2 {
-                let workspace = infer_single_tab_workspace(action)?;
-                return run_workspace_tab_command(&workspace, action, &args[1..]);
-            }
-            if args.len() != 3 {
-                return Err(AwError::usage(format!(
-                    "aw: tab {} requires a tab shorthand or workspace and tab",
-                    action
-                )));
-            }
-            let workspace = args.get(1).map(String::as_str).unwrap_or("");
-            run_workspace_tab_command(workspace, action, &args[2..])
-        }
-        "rename" => {
-            if args.len() == 3 {
-                let workspace = infer_single_tab_workspace(action)?;
-                return run_workspace_tab_command(&workspace, action, &args[1..]);
-            }
-            if args.len() != 4 {
-                return Err(AwError::usage(
-                    "aw: tab rename requires old and new tab shorthand or workspace, old tab, and new tab",
-                ));
-            }
-            let workspace = args.get(1).map(String::as_str).unwrap_or("");
-            run_workspace_tab_command(workspace, action, &args[2..])
-        }
-        other => Err(AwError::usage(format!("aw: unknown tab action {}", other))),
-    }
+    };
+    let (workspace, tab_args) = resolve_tab_command(None, action, rest)?;
+    run_workspace_tab_command(&workspace, action, tab_args)
 }
 
 fn infer_single_tab_workspace(action: &str) -> Result<String> {
@@ -491,47 +427,80 @@ fn infer_single_tab_workspace(action: &str) -> Result<String> {
     }
 }
 
-fn run_workspace_first_tab_command(workspace: &str, args: &[String]) -> Result<i32> {
-    let action = args.first().map(String::as_str).unwrap_or("");
-    if action.is_empty() {
+fn run_tab_command_for_workspace(workspace: &str, args: &[String]) -> Result<i32> {
+    let Some((action, rest)) = args.split_first() else {
         return Err(AwError::usage(format!(
             "aw: {} tab requires an action",
             workspace
         )));
-    }
+    };
+    let (workspace, tab_args) = resolve_tab_command(Some(workspace), action, rest)?;
+    run_workspace_tab_command(&workspace, action, tab_args)
+}
 
+fn resolve_tab_command<'a>(
+    workspace: Option<&str>,
+    action: &str,
+    args: &'a [String],
+) -> Result<(String, &'a [String])> {
     match action {
         "list" | "refresh" => {
-            if args.len() != 1 {
+            if let Some(workspace) = workspace {
+                if args.is_empty() {
+                    return Ok((workspace.to_string(), args));
+                }
                 return Err(AwError::usage(format!(
-                    "aw: {} tab {} does not accept extra arguments",
-                    workspace, action
+                    "aw: {workspace} tab {action} does not accept extra arguments"
                 )));
             }
-            run_workspace_tab_command(workspace, action, &[])
+            match args {
+                [] => Ok((infer_single_tab_workspace(action)?, args)),
+                [workspace] => Ok((workspace.clone(), &[])),
+                _ => Err(AwError::usage(format!(
+                    "aw: tab {action} accepts either no workspace shorthand or exactly one workspace"
+                ))),
+            }
         }
         "add" | "move" | "remove" => {
-            if args.len() != 2 {
+            if let Some(workspace) = workspace {
+                if args.len() == 1 {
+                    return Ok((workspace.to_string(), args));
+                }
                 return Err(AwError::usage(format!(
-                    "aw: {} tab {} requires exactly one tab",
-                    workspace, action
+                    "aw: {workspace} tab {action} requires exactly one tab"
                 )));
             }
-            run_workspace_tab_command(workspace, action, &args[1..])
+            match args {
+                [_tab] => Ok((infer_single_tab_workspace(action)?, &args[..1])),
+                [workspace, _tab] => Ok((workspace.clone(), &args[1..])),
+                _ => Err(AwError::usage(format!(
+                    "aw: tab {action} requires a tab shorthand or workspace and tab"
+                ))),
+            }
         }
         "rename" => {
-            if args.len() != 3 {
+            if let Some(workspace) = workspace {
+                if args.len() == 2 {
+                    return Ok((workspace.to_string(), args));
+                }
                 return Err(AwError::usage(format!(
-                    "aw: {} tab rename requires old and new tab names",
-                    workspace
+                    "aw: {workspace} tab rename requires old and new tab names"
                 )));
             }
-            run_workspace_tab_command(workspace, action, &args[1..])
+            match args {
+                [_old_tab, _new_tab] => Ok((infer_single_tab_workspace(action)?, &args[..2])),
+                [workspace, ..] if args.len() == 3 => Ok((workspace.clone(), &args[1..])),
+                _ => Err(AwError::usage(
+                    "aw: tab rename requires old and new tab shorthand or workspace, old tab, and new tab",
+                )),
+            }
         }
-        other => Err(AwError::usage(format!(
-            "aw: unknown {} tab action {}",
-            workspace, other
-        ))),
+        other => match workspace {
+            Some(workspace) => Err(AwError::usage(format!(
+                "aw: unknown {workspace} tab action {other}"
+            ))),
+            None => Err(AwError::usage(format!("aw: unknown tab action {other}"))),
+        },
     }
 }
 

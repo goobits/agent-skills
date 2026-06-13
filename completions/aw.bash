@@ -63,6 +63,36 @@ _aw_completion() {
     done < <(compgen -f -- "$cur")
   }
 
+  _aw_complete_tab_command() {
+    local workspace="$1" action="$2" first_arg_index="$3" single_workspace
+    if [[ -z "$action" ]]; then
+      COMPREPLY=( $(compgen -W "list add move rename remove refresh" -- "$cur") )
+      return
+    fi
+
+    case "$action" in
+      list|refresh)
+        if [[ -z "$workspace" && "$COMP_CWORD" -eq "$first_arg_index" && -z "$(_aw_single_workspace)" ]]; then
+          COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
+        fi
+        ;;
+      add|move|remove|rename)
+        if [[ -n "$workspace" ]]; then
+          [[ "$COMP_CWORD" -eq "$first_arg_index" ]] && COMPREPLY=( $(compgen -W "$(_aw_tabs "$workspace")" -- "$cur") )
+          return
+        fi
+        single_workspace="$(_aw_single_workspace)"
+        if [[ "$COMP_CWORD" -eq "$first_arg_index" && -n "$single_workspace" ]]; then
+          COMPREPLY=( $(compgen -W "$(_aw_tabs "$single_workspace")" -- "$cur") )
+        elif [[ "$COMP_CWORD" -eq "$first_arg_index" ]]; then
+          COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
+        elif [[ "$COMP_CWORD" -eq $((first_arg_index + 1)) && -z "$single_workspace" ]]; then
+          COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[$first_arg_index]}")" -- "$cur") )
+        fi
+        ;;
+    esac
+  }
+
   case "${COMP_WORDS[1]:-}" in
     commit)
       if [[ "$COMP_CWORD" -eq 2 ]]; then
@@ -120,38 +150,7 @@ _aw_completion() {
       [[ "$COMP_CWORD" -eq 2 ]] && COMPREPLY=( $(compgen -W "git pkg" -- "$cur") )
       ;;
     tab)
-      case "${COMP_WORDS[2]:-}" in
-        "")
-          COMPREPLY=( $(compgen -W "list add move rename remove refresh" -- "$cur") )
-          ;;
-        list|refresh)
-          if [[ "$COMP_CWORD" -eq 3 && -z "$(_aw_single_workspace)" ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
-          fi
-          ;;
-        add|move|remove)
-          local single_workspace
-          single_workspace="$(_aw_single_workspace)"
-          if [[ "$COMP_CWORD" -eq 3 && -n "$single_workspace" ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_tabs "$single_workspace")" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 3 ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 4 && -z "$single_workspace" ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[3]}")" -- "$cur") )
-          fi
-          ;;
-        rename)
-          local single_workspace
-          single_workspace="$(_aw_single_workspace)"
-          if [[ "$COMP_CWORD" -eq 3 && -n "$single_workspace" ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_tabs "$single_workspace")" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 3 ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
-          elif [[ "$COMP_CWORD" -eq 4 && -z "$single_workspace" ]]; then
-            COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[3]}")" -- "$cur") )
-          fi
-          ;;
-      esac
+      _aw_complete_tab_command "" "${COMP_WORDS[2]:-}" 3
       ;;
     refresh|remove|rename)
       [[ "$COMP_CWORD" -eq 2 ]] && COMPREPLY=( $(compgen -W "$(_aw_workspaces)" -- "$cur") )
@@ -159,32 +158,9 @@ _aw_completion() {
     doctor)
       [[ "$COMP_CWORD" -eq 2 ]] && COMPREPLY=( $(compgen -W "repo --config" -- "$cur") )
       ;;
-    migrate)
-      if [[ "$COMP_CWORD" -eq 2 ]]; then
-        COMPREPLY=( $(compgen -W "repo" -- "$cur") )
-      elif [[ "${COMP_WORDS[2]:-}" == "repo" ]]; then
-        COMPREPLY=( $(compgen -W "--dry-run" -- "$cur") )
-      fi
-      ;;
     *)
       if [[ "${COMP_WORDS[2]:-}" == "tab" ]]; then
-        case "${COMP_WORDS[3]:-}" in
-          "")
-            [[ "$COMP_CWORD" -eq 3 ]] && COMPREPLY=( $(compgen -W "list add move rename remove refresh" -- "$cur") )
-            ;;
-          list|refresh)
-            ;;
-          add|move|remove)
-            if [[ "$COMP_CWORD" -eq 4 ]]; then
-              COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[1]}")" -- "$cur") )
-            fi
-            ;;
-          rename)
-            if [[ "$COMP_CWORD" -eq 4 ]]; then
-              COMPREPLY=( $(compgen -W "$(_aw_tabs "${COMP_WORDS[1]}")" -- "$cur") )
-            fi
-            ;;
-        esac
+        _aw_complete_tab_command "${COMP_WORDS[1]}" "${COMP_WORDS[3]:-}" 4
       elif [[ "$COMP_CWORD" -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "help install setup doctor paths repo list create refresh rename remove tab commit owner ps kill $(_aw_workspaces)" -- "$cur") )
       elif [[ "$COMP_CWORD" -eq 2 ]]; then

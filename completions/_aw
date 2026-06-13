@@ -64,6 +64,34 @@ _aw_tabs() {
   done < "$tabs_file"
 }
 
+_aw_complete_tab_command() {
+  local workspace="$1" action="$2" first_arg_index="$3" single_workspace
+  if [[ -z "$action" ]]; then
+    compadd -- "${tab_commands[@]}"
+    return
+  fi
+
+  case "$action" in
+    list|refresh)
+      [[ -z "$workspace" && "$CURRENT" -eq "$first_arg_index" && -z "$(_aw_single_workspace)" ]] && _aw_workspaces
+      ;;
+    add|move|remove|rename)
+      if [[ -n "$workspace" ]]; then
+        [[ "$CURRENT" -eq "$first_arg_index" ]] && _aw_tabs "$workspace"
+        return
+      fi
+      single_workspace="$(_aw_single_workspace)"
+      if [[ "$CURRENT" -eq "$first_arg_index" && -n "$single_workspace" ]]; then
+        _aw_tabs "$single_workspace"
+      elif [[ "$CURRENT" -eq "$first_arg_index" ]]; then
+        _aw_workspaces
+      elif [[ "$CURRENT" -eq $((first_arg_index + 1)) && -z "$single_workspace" ]]; then
+        _aw_tabs "${words[$first_arg_index]}"
+      fi
+      ;;
+  esac
+}
+
 _aw() {
   local -a commands tab_commands commit_commands repo_commands owner_commands
   commands=(help install setup doctor paths repo list create refresh rename remove tab commit owner ps kill)
@@ -132,36 +160,7 @@ _aw() {
       esac
       ;;
     tab)
-      case "${words[3]:-}" in
-        "")
-          compadd -- "${tab_commands[@]}"
-          ;;
-        list|refresh)
-          [[ "$CURRENT" -eq 4 && -z "$(_aw_single_workspace)" ]] && _aw_workspaces
-          ;;
-        add|move|remove)
-          local single_workspace
-          single_workspace="$(_aw_single_workspace)"
-          if [[ "$CURRENT" -eq 4 && -n "$single_workspace" ]]; then
-            _aw_tabs "$single_workspace"
-          elif [[ "$CURRENT" -eq 4 ]]; then
-            _aw_workspaces
-          elif [[ "$CURRENT" -eq 5 && -z "$single_workspace" ]]; then
-            _aw_tabs "${words[4]}"
-          fi
-          ;;
-        rename)
-          local single_workspace
-          single_workspace="$(_aw_single_workspace)"
-          if [[ "$CURRENT" -eq 4 && -n "$single_workspace" ]]; then
-            _aw_tabs "$single_workspace"
-          elif [[ "$CURRENT" -eq 4 ]]; then
-            _aw_workspaces
-          elif [[ "$CURRENT" -eq 5 && -z "$single_workspace" ]]; then
-            _aw_tabs "${words[4]}"
-          fi
-          ;;
-      esac
+      _aw_complete_tab_command "" "${words[3]:-}" 4
       ;;
     refresh|remove)
       [[ "$CURRENT" -eq 3 ]] && _aw_workspaces
@@ -172,31 +171,12 @@ _aw() {
     doctor)
       [[ "$CURRENT" -eq 3 ]] && compadd -- repo --config
       ;;
-    migrate)
-      if [[ "$CURRENT" -eq 3 ]]; then
-        compadd -- repo
-      elif [[ "${words[3]:-}" == "repo" ]]; then
-        compadd -- --dry-run
-      fi
-      ;;
     kill)
       [[ "$CURRENT" -eq 3 ]] && compadd -- $(zellij list-sessions -n 2>/dev/null | awk '{ print $1 }')
       ;;
     *)
       if [[ "${words[3]:-}" == "tab" ]]; then
-        case "${words[4]:-}" in
-          "")
-            [[ "$CURRENT" -eq 4 ]] && compadd -- "${tab_commands[@]}"
-            ;;
-          list|refresh)
-            ;;
-          add|move|remove)
-            [[ "$CURRENT" -eq 5 ]] && _aw_tabs "${words[2]}"
-            ;;
-          rename)
-            [[ "$CURRENT" -eq 5 ]] && _aw_tabs "${words[2]}"
-            ;;
-        esac
+        _aw_complete_tab_command "${words[2]}" "${words[4]:-}" 5
       elif [[ "$CURRENT" -eq 2 ]]; then
         compadd -- "${commands[@]}"
         _aw_workspaces

@@ -35,16 +35,7 @@ pub fn doctor_repo() -> Result<i32> {
 }
 
 pub fn run_migrate(args: &[String]) -> Result<i32> {
-    let Some((scope, rest)) = args.split_first() else {
-        return Err(AwError::usage("aw repo migrate accepts only --dry-run"));
-    };
-    if scope != "repo" {
-        return Err(AwError::usage(format!(
-            "aw migrate: unknown scope {}",
-            scope
-        )));
-    }
-    let dry_run = match rest {
+    let dry_run = match args {
         [] => false,
         [flag] if flag == "--dry-run" => true,
         _ => return Err(AwError::usage("aw repo migrate accepts only --dry-run")),
