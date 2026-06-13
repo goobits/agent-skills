@@ -10,6 +10,72 @@ pub fn home_dir() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("."))
 }
 
+pub fn aw_home() -> PathBuf {
+    env::var_os("AW_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home_dir().join(".aw"))
+}
+
+pub fn local_bin_dir() -> PathBuf {
+    home_dir().join(".local/bin")
+}
+
+pub fn aw_config_file() -> PathBuf {
+    aw_home().join("config.kdl")
+}
+
+pub fn aw_default_profile_file() -> PathBuf {
+    aw_home().join("default-profile")
+}
+
+pub fn aw_profiles_dir() -> PathBuf {
+    aw_home().join("profiles")
+}
+
+pub fn aw_private_bin_dir() -> PathBuf {
+    aw_home().join("bin")
+}
+
+pub fn aw_completions_dir() -> PathBuf {
+    aw_home().join("completions")
+}
+
+pub fn aw_plugins_dir() -> PathBuf {
+    aw_home().join("plugins")
+}
+
+pub fn aw_legacy_state_dir() -> PathBuf {
+    home_dir().join(".local/share/agent-workspace")
+}
+
+pub fn aw_legacy_config_file() -> PathBuf {
+    home_dir().join(".config/aw/config.kdl")
+}
+
+pub fn aw_legacy_default_profile_file() -> PathBuf {
+    aw_legacy_state_dir().join("default-profile")
+}
+
+pub fn aw_legacy_profiles_dir() -> PathBuf {
+    aw_legacy_state_dir().join("profiles")
+}
+
+pub fn aw_legacy_private_bin_dir() -> PathBuf {
+    aw_legacy_state_dir().join("bin")
+}
+
+pub fn aw_default_profile_candidates() -> [PathBuf; 2] {
+    [aw_default_profile_file(), aw_legacy_default_profile_file()]
+}
+
+pub fn aw_profile_dir_candidates(profile_name: &str) -> [PathBuf; 2] {
+    [
+        aw_profiles_dir().join(profile_name),
+        aw_legacy_profiles_dir().join(profile_name),
+    ]
+}
+
 pub fn current_dir() -> Result<PathBuf> {
     Ok(env::current_dir()?)
 }
@@ -28,9 +94,12 @@ pub fn helper_path(executable: &str) -> PathBuf {
         }
     }
 
-    home_dir()
-        .join(".local/share/agent-workspace/bin")
-        .join(executable)
+    let primary = aw_private_bin_dir().join(executable);
+    if primary.is_file() {
+        return primary;
+    }
+
+    aw_legacy_private_bin_dir().join(executable)
 }
 
 pub fn resolve_root(path: &str) -> Result<PathBuf> {

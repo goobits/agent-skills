@@ -9,7 +9,7 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::error::{AwError, Result};
-use crate::paths::home_dir;
+use crate::paths::{aw_default_profile_candidates, aw_profile_dir_candidates};
 use crate::tab_order::saved_session_order;
 use crate::zellij::{base_name, value_to_string};
 
@@ -321,15 +321,19 @@ fn normalize_saved_session_order(state: &WatcherState) -> Result<()> {
 }
 
 fn configured_session_tab_order(session: &str) -> Vec<String> {
-    let default = home_dir().join(".local/share/agent-workspace/default-profile");
-    let Ok(profile_name) = fs::read_to_string(default) else {
+    let profile_name = aw_default_profile_candidates()
+        .into_iter()
+        .find_map(|path| fs::read_to_string(path).ok())
+        .and_then(|contents| contents.lines().next().map(str::to_string))
+        .unwrap_or_default();
+    if profile_name.is_empty() {
         return Vec::new();
-    };
-    let tabs_file = home_dir()
-        .join(".local/share/agent-workspace/profiles")
-        .join(profile_name.trim())
-        .join(format!("{}.tabs", session));
-    fs::read_to_string(tabs_file)
+    }
+    let contents = aw_profile_dir_candidates(profile_name.trim())
+        .into_iter()
+        .map(|profile_dir| profile_dir.join(format!("{}.tabs", session)))
+        .find_map(|tabs_file| fs::read_to_string(tabs_file).ok());
+    contents
         .map(|contents| {
             contents
                 .lines()

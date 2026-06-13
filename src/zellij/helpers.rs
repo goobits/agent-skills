@@ -5,7 +5,10 @@ use std::process::{Command, Stdio};
 
 use crate::error::{AwError, Result};
 use crate::layout::render_layout;
-use crate::paths::{home_dir, is_executable, path_string, validate_name};
+use crate::paths::{
+    aw_config_file, aw_private_bin_dir, aw_profile_dir_candidates, home_dir, is_executable,
+    local_bin_dir, path_string, validate_name,
+};
 use crate::profile::{install_profile, profile_value};
 use crate::tab_order::{live_tab_order, saved_session_order, session_tab_order};
 use crate::tabs::read_tab_lines;
@@ -406,11 +409,10 @@ fn workspace_doctor_command(args: &[String]) -> Result<i32> {
 
 fn doctor(config_dir: &str) -> Result<i32> {
     let mut failures = 0;
-    let local_bin = home_dir().join(".local/bin");
-    let state_dir = home_dir().join(".local/share/agent-workspace");
+    let local_bin = local_bin_dir();
     let internal_bin = env::var_os("ZELLIJ_WORKSPACES_BIN")
         .map(PathBuf::from)
-        .unwrap_or_else(|| state_dir.join("bin"));
+        .unwrap_or_else(aw_private_bin_dir);
     if Command::new("zellij")
         .arg("--version")
         .stdout(Stdio::null())
@@ -423,7 +425,7 @@ fn doctor(config_dir: &str) -> Result<i32> {
         eprintln!("missing: zellij command");
         failures += 1;
     }
-    check_file(&home_dir().join(".config/aw/config.kdl"), &mut failures);
+    check_file(&aw_config_file(), &mut failures);
     check_exec(&local_bin.join("aw"), &mut failures);
     check_absent(&local_bin.join("goob"), &mut failures);
     for executable in [
@@ -459,7 +461,10 @@ fn doctor(config_dir: &str) -> Result<i32> {
                 "name",
                 config.file_name().and_then(|n| n.to_str()).unwrap_or(""),
             );
-            let target = state_dir.join("profiles").join(profile_name);
+            let target = aw_profile_dir_candidates(&profile_name)
+                .into_iter()
+                .find(|path| path.is_dir())
+                .unwrap_or_else(|| aw_profile_dir_candidates(&profile_name)[0].clone());
             check_file(&config.join("profile.conf"), &mut failures);
             check_file(&target.join("profile.conf"), &mut failures);
             for tabs_file in tabs_files(&config) {
@@ -635,11 +640,10 @@ fn resolve_profile_dir(profile_name: &str) -> Result<PathBuf> {
             return Ok(candidate.canonicalize().unwrap_or(candidate));
         }
     }
-    let candidate = home_dir()
-        .join(".local/share/agent-workspace/profiles")
-        .join(profile_name);
-    if candidate.is_dir() {
-        return Ok(candidate);
+    for candidate in aw_profile_dir_candidates(profile_name) {
+        if candidate.is_dir() {
+            return Ok(candidate);
+        }
     }
     Err(AwError::new(
         format!("zwork: missing profile {}", profile_name),

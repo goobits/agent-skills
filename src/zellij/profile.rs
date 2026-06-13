@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 
 use crate::error::{AwError, Result};
 use crate::paths::{
-    current_dir, home_dir, is_executable, path_string, resolve_root, validate_name,
+    aw_default_profile_candidates, aw_default_profile_file, aw_profile_dir_candidates,
+    aw_profiles_dir, current_dir, is_executable, local_bin_dir, path_string, resolve_root,
+    validate_name,
 };
 
 pub fn profile_value(config_file: &Path, key: &str, default_value: &str) -> String {
@@ -50,10 +52,11 @@ pub fn resolve_profile_name(config_dir: Option<&Path>) -> String {
         }
     }
 
-    let default_file = home_dir().join(".local/share/agent-workspace/default-profile");
-    if let Ok(contents) = fs::read_to_string(default_file) {
-        if let Some(line) = contents.lines().next() {
-            return line.to_string();
+    for default_file in aw_default_profile_candidates() {
+        if let Ok(contents) = fs::read_to_string(default_file) {
+            if let Some(line) = contents.lines().next() {
+                return line.to_string();
+            }
         }
     }
 
@@ -149,10 +152,10 @@ pub fn install_profile(config_dir: &Path, quiet: bool) -> Result<()> {
         ));
     }
 
-    let state_dir = home_dir().join(".local/share/agent-workspace");
-    let profile_target = state_dir.join("profiles").join(&profile_name);
-    let lock_dir = state_dir.join(format!(".profile-{}.lock", profile_name));
-    fs::create_dir_all(&state_dir)?;
+    let profiles_dir = aw_profiles_dir();
+    let profile_target = profiles_dir.join(&profile_name);
+    let lock_dir = profiles_dir.join(format!(".profile-{}.lock", profile_name));
+    fs::create_dir_all(&profiles_dir)?;
     let mut locked = false;
     for _ in 0..200 {
         match fs::create_dir(&lock_dir) {
@@ -176,12 +179,9 @@ pub fn install_profile(config_dir: &Path, quiet: bool) -> Result<()> {
 
     let _ = fs::remove_dir_all(&profile_target);
     fs::create_dir_all(&profile_target)?;
-    fs::create_dir_all(home_dir().join(".local/bin"))?;
+    fs::create_dir_all(local_bin_dir())?;
     fs::copy(&config_file, profile_target.join("profile.conf"))?;
-    fs::write(
-        state_dir.join("default-profile"),
-        format!("{}\n", profile_name),
-    )?;
+    fs::write(aw_default_profile_file(), format!("{}\n", profile_name))?;
     for tabs_file in tabs_files {
         let target = profile_target.join(tabs_file.file_name().unwrap_or_default());
         fs::copy(tabs_file, target)?;
@@ -193,9 +193,7 @@ pub fn install_profile(config_dir: &Path, quiet: bool) -> Result<()> {
             if path.is_file() && is_executable(&path) {
                 fs::copy(
                     &path,
-                    home_dir()
-                        .join(".local/bin")
-                        .join(path.file_name().unwrap_or_default()),
+                    local_bin_dir().join(path.file_name().unwrap_or_default()),
                 )?;
             }
         }
@@ -242,9 +240,12 @@ pub fn auto_install_config() -> Result<Option<PathBuf>> {
 
 pub fn profile_dir_from_installed_default() -> PathBuf {
     let profile_name = resolve_profile_name(None);
-    home_dir()
-        .join(".local/share/agent-workspace/profiles")
-        .join(profile_name)
+    for candidate in aw_profile_dir_candidates(&profile_name) {
+        if candidate.is_dir() {
+            return candidate;
+        }
+    }
+    aw_profiles_dir().join(profile_name)
 }
 
 pub fn default_workspace_from_config(config_dir: &Path) -> String {

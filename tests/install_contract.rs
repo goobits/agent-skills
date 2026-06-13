@@ -41,10 +41,7 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
         ".zellij-agent-tab-watcher",
     ] {
         assert!(
-            home.home
-                .join(".local/share/agent-workspace/bin")
-                .join(executable)
-                .is_file(),
+            home.home.join(".aw/bin").join(executable).is_file(),
             "missing private helper {executable}"
         );
     }
@@ -69,11 +66,11 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
     }
 
     for file in [
-        ".config/aw/config.kdl",
+        ".aw/config.kdl",
         ".codex/config.toml",
         ".claude/settings.json",
-        ".local/share/agent-workspace/completions/_aw",
-        ".local/share/agent-workspace/completions/aw.bash",
+        ".aw/completions/_aw",
+        ".aw/completions/aw.bash",
     ] {
         assert!(home.home.join(file).is_file(), "missing installed {file}");
     }
@@ -82,9 +79,7 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
     assert!(codex_config.contains("status_line = ["));
     assert!(codex_config.contains("\"context-used\""));
 
-    let claude_statusline = home
-        .home
-        .join(".local/share/agent-workspace/bin/claude-statusline");
+    let claude_statusline = home.home.join(".aw/bin/claude-statusline");
     assert!(claude_statusline.is_file());
     let claude_statusline_script = fs::read_to_string(&claude_statusline).unwrap();
     assert!(claude_statusline_script.contains("used_percentage"));
@@ -97,11 +92,7 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
         .unwrap()
         .contains("claude-statusline"));
 
-    let bash_completion = fs::read_to_string(
-        home.home
-            .join(".local/share/agent-workspace/completions/aw.bash"),
-    )
-    .unwrap();
+    let bash_completion = fs::read_to_string(home.home.join(".aw/completions/aw.bash")).unwrap();
     assert!(bash_completion.contains(
         "--check --verify --root --summary --owner --must-contain --must-not-contain --poke --wait --timeout --poll"
     ));
@@ -109,21 +100,21 @@ fn install_writes_public_binary_private_helpers_config_and_completions() {
     assert!(bash_completion.contains("status|doctor)"));
     assert!(bash_completion.contains("doctor)"));
     assert!(bash_completion.contains("migrate)"));
+    assert!(bash_completion.contains("routes)"));
+    assert!(bash_completion.contains("doctor paths repo"));
     assert!(bash_completion.contains("wait)"));
 
-    let zsh_completion = fs::read_to_string(
-        home.home
-            .join(".local/share/agent-workspace/completions/_aw"),
-    )
-    .unwrap();
+    let zsh_completion = fs::read_to_string(home.home.join(".aw/completions/_aw")).unwrap();
     assert!(zsh_completion.contains(
         "--check --verify --root --summary --owner --must-contain --must-not-contain --poke --wait --timeout --poll"
     ));
     assert!(zsh_completion.contains("git --root"));
-    assert!(zsh_completion.contains("doctor migrate"));
+    assert!(zsh_completion
+        .contains("doctor migrate clean measure-git probe-git-config routes worktree"));
+    assert!(zsh_completion.contains("doctor paths repo"));
     assert!(!zsh_completion.contains("Git --root"));
 
-    let config = fs::read_to_string(home.home.join(".config/aw/config.kdl")).unwrap();
+    let config = fs::read_to_string(home.home.join(".aw/config.kdl")).unwrap();
     assert!(!config.contains("/usr/bin/zsh"));
     assert!(config.contains("post_command_discovery_hook \"printf"));
     assert!(config.contains("${SHELL:-sh}"));
@@ -148,9 +139,7 @@ fn install_copies_aw_tab_bar_plugin_when_wasm_source_is_available() {
         .expect("run aw install");
     assert_success("aw install", &output);
 
-    let installed = home
-        .home
-        .join(".local/share/agent-workspace/plugins/aw-tab-bar.wasm");
+    let installed = home.home.join(".aw/plugins/aw-tab-bar.wasm");
     assert_eq!(fs::read_to_string(&installed).unwrap(), "wasm\n");
 
     let permissions = fs::read_to_string(home.home.join(".cache/zellij/permissions.kdl")).unwrap();
@@ -207,10 +196,44 @@ fn install_preserves_existing_claude_status_line() {
     assert!(claude_settings.contains("\"custom status\""));
     assert!(claude_settings.contains("\"cleanupPeriodDays\":30"));
     assert!(!claude_settings.contains("claude-statusline"));
-    assert!(home
-        .home
-        .join(".local/share/agent-workspace/bin/claude-statusline")
-        .is_file());
+    assert!(home.home.join(".aw/bin/claude-statusline").is_file());
+}
+
+#[test]
+fn install_migrates_legacy_aw_state_when_new_home_is_missing() {
+    let home = TestHome::new("install-legacy-aw-migration");
+    temp::write(
+        home.home
+            .join(".local/share/agent-workspace/profiles/legacy/front.tabs"),
+        "app\nscratch\n",
+    );
+    temp::write(
+        home.home
+            .join(".local/share/agent-workspace/profiles/legacy/profile.conf"),
+        "name=legacy\n",
+    );
+    temp::write(
+        home.home
+            .join(".local/share/agent-workspace/default-profile"),
+        "legacy\n",
+    );
+    temp::write(home.home.join(".config/aw/config.kdl"), "legacy-config\n");
+
+    let output = home
+        .command(support::command::aw())
+        .env("ZELLIJ_INSTALL_BINARY", "0")
+        .env("ZELLIJ_INSTALL_SHELL_RC", "0")
+        .arg("install")
+        .output()
+        .expect("run aw install");
+    assert_success("aw install", &output);
+
+    assert!(home.home.join(".aw/profiles/legacy/front.tabs").is_file());
+    assert_eq!(
+        fs::read_to_string(home.home.join(".aw/default-profile")).unwrap(),
+        "legacy\n"
+    );
+    assert!(home.home.join(".aw/config.kdl").is_file());
 }
 
 #[test]
@@ -302,10 +325,7 @@ fn install_repo_auto_config_creates_adapters_and_profile() {
         fs::read_link(repo.join(".claude/skills")).unwrap(),
         std::path::Path::new("../.agents/skills")
     );
-    assert!(home
-        .home
-        .join(".local/share/agent-workspace/profiles/demo/front.tabs")
-        .is_file());
+    assert!(home.home.join(".aw/profiles/demo/front.tabs").is_file());
     assert!(stdout(&output).contains("Installed Zellij profile demo."));
 }
 

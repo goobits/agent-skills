@@ -11,12 +11,24 @@ use crate::profile::{default_workspace_from_config, find_config_dir, install_pro
 use crate::tabs::upsert_workspace_tab_line;
 use crate::zellij::{ensure_workspace_tabs_file, send_to_commit_tab, sync_workspace_session};
 
+const COMMIT_USAGE: &str = r#"usage:
+  aw commit setup [workspace] [--tab git] [--session <name>] [--agent <cmd>|--no-agent]
+  aw commit request <title> <path>... [--check <cmd>] [--summary <text>] [--root <queue-root>] [--poke [tab]] [--wait] [--timeout 10m]
+  aw commit status [--root <queue-root>]
+  aw commit doctor [--root <queue-root>]
+  aw commit wait <id> [--root <queue-root>] [--timeout 10m]
+  aw commit poke [tab] [--root <queue-root>]"#;
+
 pub fn run_commit_command(args: &[String]) -> Result<i32> {
     let Some((action, rest)) = args.split_first() else {
-        return Err(AwError::usage("aw: commit requires an action"));
+        return Err(commit_usage("aw: commit requires an action"));
     };
 
     match action.as_str() {
+        "-h" | "--help" | "help" => {
+            println!("{}", COMMIT_USAGE);
+            Ok(0)
+        }
         "setup" => {
             setup_commit_tab(rest)?;
             Ok(0)
@@ -50,10 +62,7 @@ pub fn run_commit_command(args: &[String]) -> Result<i32> {
             commit_poke(rest)?;
             Ok(0)
         }
-        other => Err(AwError::usage(format!(
-            "aw: unknown commit action {}",
-            other
-        ))),
+        other => Err(commit_usage(format!("aw: unknown commit action {}", other))),
     }
 }
 
@@ -90,7 +99,7 @@ fn setup_commit_tab(args: &[String]) -> Result<()> {
                 index += 1;
             }
             other => {
-                return Err(AwError::usage(format!(
+                return Err(commit_usage(format!(
                     "aw: unknown commit setup argument {}",
                     other
                 )))
@@ -155,7 +164,7 @@ fn setup_commit_tab(args: &[String]) -> Result<()> {
 
 fn commit_add(action: &str, args: &[String]) -> Result<()> {
     if args.len() < 2 {
-        return Err(AwError::usage(format!(
+        return Err(commit_usage(format!(
             "aw: commit {action} requires a title and at least one path"
         )));
     }
@@ -212,7 +221,7 @@ fn commit_add(action: &str, args: &[String]) -> Result<()> {
                 index += 2;
             }
             other if other.starts_with("--") => {
-                return Err(AwError::usage(format!(
+                return Err(commit_usage(format!(
                     "aw: unknown commit {action} argument {other}"
                 )));
             }
@@ -226,7 +235,7 @@ fn commit_add(action: &str, args: &[String]) -> Result<()> {
     }
 
     if path_count == 0 {
-        return Err(AwError::usage(format!(
+        return Err(commit_usage(format!(
             "aw: commit {action} requires at least one path"
         )));
     }
@@ -348,16 +357,14 @@ fn commit_poke(args: &[String]) -> Result<()> {
                 index += 2;
             }
             other if other.starts_with("--") => {
-                return Err(AwError::usage(format!(
+                return Err(commit_usage(format!(
                     "aw: unknown commit poke argument {}",
                     other
                 )));
             }
             tab => {
                 if poke_tab != "git" {
-                    return Err(AwError::usage(
-                        "aw: commit poke accepts at most one tab name",
-                    ));
+                    return Err(commit_usage("aw: commit poke accepts at most one tab name"));
                 }
                 poke_tab = tab.to_string();
                 index += 1;
@@ -602,13 +609,13 @@ fn parse_root_only(args: &[String], action: &str) -> Result<Option<String>> {
                 index += 2;
             }
             other if other.starts_with("--") => {
-                return Err(AwError::usage(format!(
+                return Err(commit_usage(format!(
                     "aw: unknown commit {} argument {}",
                     action, other
                 )));
             }
             other => {
-                return Err(AwError::usage(format!(
+                return Err(commit_usage(format!(
                     "aw: commit {} does not accept positional arguments: {}",
                     action, other
                 )));
@@ -670,4 +677,8 @@ fn require_option_value(args: &[String], index: usize) -> Result<&str> {
         return Err(AwError::new(format!("aw: {} requires a value", option), 2));
     }
     Ok(value)
+}
+
+fn commit_usage(message: impl Into<String>) -> AwError {
+    AwError::new(format!("{}\n\n{}", message.into(), COMMIT_USAGE), 2)
 }

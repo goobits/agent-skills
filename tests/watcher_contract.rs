@@ -131,14 +131,10 @@ fn watcher_marks_tabs_and_repairs_saved_order() {
         vec!["path", "outline", "tools"]
     );
 
-    std::fs::create_dir_all(tmp.join("home/.local/share/agent-workspace/profiles/test-profile"))
-        .unwrap();
+    std::fs::create_dir_all(tmp.join("home/.aw/profiles/test-profile")).unwrap();
+    temp::write(tmp.join("home/.aw/default-profile"), "test-profile\n");
     temp::write(
-        tmp.join("home/.local/share/agent-workspace/default-profile"),
-        "test-profile\n",
-    );
-    temp::write(
-        tmp.join("home/.local/share/agent-workspace/profiles/test-profile/watcher-test.tabs"),
+        tmp.join("home/.aw/profiles/test-profile/watcher-test.tabs"),
         "path\noutline\ntools\n",
     );
     temp::write(

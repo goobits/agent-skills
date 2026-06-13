@@ -12,6 +12,15 @@ use crate::error::{AwError, Result};
 const DEFAULT_GIT_MEASURE_PATH: &str = "infra/aw";
 const DEFAULT_ROUTES_CONFIG_PATH: &str = "config/aw/routes.conf";
 
+pub const REPO_USAGE: &str = r#"usage:
+  aw repo doctor
+  aw repo migrate [--dry-run]
+  aw repo clean [--delete] [--generated|--rust-targets|--nested-node-modules|--all-safe|--build-outputs|--preprocessed]
+  aw repo measure-git [path]
+  aw repo probe-git-config [--path path] [--apply]
+  aw repo routes [doctor] [--config path]
+  aw repo worktree <path> [--branch name] [--base ref]"#;
+
 pub fn run(args: &[String]) -> Result<i32> {
     let Some((command, rest)) = args.split_first() else {
         print_usage();
@@ -30,7 +39,7 @@ pub fn run_named(command: &str, args: &[String]) -> Result<i32> {
         "measure-git" => measure_git(args),
         "probe-git-config" => probe_git_config(args),
         "routes" => routes(args),
-        other => Err(AwError::new(format!("aw repo: unknown command {other}"), 1)),
+        other => Err(repo_usage(format!("aw: unknown repo command {other}"))),
     }
 }
 
@@ -53,7 +62,7 @@ fn cleanup_generated(args: &[String]) -> Result<i32> {
     .collect::<BTreeSet<_>>();
     for arg in &args {
         if !allowed.contains(arg.as_str()) {
-            return Err(AwError::new(format!("Unknown option: {arg}"), 1));
+            return Err(repo_usage(format!("aw: unknown repo clean option {arg}")));
         }
     }
     let options = CleanupOptions {
@@ -182,12 +191,16 @@ fn probe_git_config(args: &[String]) -> Result<i32> {
             "--path" => {
                 target_path = args
                     .get(index + 1)
-                    .ok_or_else(|| AwError::new("--path requires a value", 1))?
+                    .ok_or_else(|| repo_usage("aw: repo probe-git-config --path requires a value"))?
                     .clone();
                 index += 2;
             }
             "--" => index += 1,
-            other => return Err(AwError::new(format!("Unknown option: {other}"), 1)),
+            other => {
+                return Err(repo_usage(format!(
+                    "aw: unknown repo probe-git-config option {other}"
+                )))
+            }
         }
     }
     let probes = vec![
@@ -259,12 +272,16 @@ fn routes(args: &[String]) -> Result<i32> {
             "--config" => {
                 config_path = args
                     .get(index + 1)
-                    .ok_or_else(|| AwError::new("--config requires a value", 1))?
+                    .ok_or_else(|| repo_usage("aw: repo routes --config requires a value"))?
                     .into();
                 index += 2;
             }
             "--" => index += 1,
-            other => return Err(AwError::new(format!("Unknown option: {other}"), 1)),
+            other => {
+                return Err(repo_usage(format!(
+                    "aw: unknown repo routes argument {other}"
+                )))
+            }
         }
     }
     let repo_root = env::current_dir()?;
@@ -568,12 +585,10 @@ fn line_count(text: &str) -> usize {
     }
 }
 
-fn print_usage() {
-    println!(
-        "Usage:
-  aw repo clean [--delete] [--generated|--rust-targets|--nested-node-modules|--all-safe|--build-outputs|--preprocessed]
-  aw repo measure-git [path]
-  aw repo probe-git-config [--path path] [--apply]
-  aw repo routes [doctor] [--config path]"
-    );
+pub fn print_usage() {
+    println!("{}", REPO_USAGE);
+}
+
+fn repo_usage(message: impl Into<String>) -> AwError {
+    AwError::new(format!("{}\n\n{}", message.into(), REPO_USAGE), 2)
 }

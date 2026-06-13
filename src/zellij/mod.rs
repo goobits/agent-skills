@@ -264,9 +264,10 @@ fn submit_enter_to_commit_pane(pane_id: Option<&str>, session: Option<&str>) -> 
 }
 
 pub fn installed_profile_dir(profile_name: &str) -> std::path::PathBuf {
-    crate::paths::home_dir()
-        .join(".local/share/agent-workspace/profiles")
-        .join(profile_name)
+    crate::paths::aw_profile_dir_candidates(profile_name)
+        .into_iter()
+        .find(|path| path.is_dir())
+        .unwrap_or_else(|| crate::paths::aw_profiles_dir().join(profile_name))
 }
 
 pub fn ensure_workspace_tabs_file(

@@ -5,7 +5,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 use crate::error::{AwError, Result};
-use crate::paths::home_dir;
+use crate::paths::{
+    aw_completions_dir, aw_config_file, aw_default_profile_file, aw_home, aw_legacy_config_file,
+    aw_legacy_default_profile_file, aw_legacy_profiles_dir, aw_plugins_dir, aw_private_bin_dir,
+    aw_profiles_dir, home_dir, local_bin_dir,
+};
 use serde_json::{json, Value};
 
 const CONFIG_KDL: &str = include_str!("../../config.kdl");
@@ -240,7 +244,7 @@ fn display_path(root: &Path, path: &Path) -> String {
 }
 
 fn install_zellij_binary() -> Result<()> {
-    if command_exists("zellij") || home_dir().join(".local/bin/zellij").is_file() {
+    if command_exists("zellij") || local_bin_dir().join("zellij").is_file() {
         return Ok(());
     }
     if env::var("ZELLIJ_INSTALL_BINARY").unwrap_or_else(|_| "1".to_string()) == "0" {
@@ -356,26 +360,26 @@ fn install_zellij_binary() -> Result<()> {
         }
     }
 
-    let local_bin = home_dir().join(".local/bin");
+    let local_bin = local_bin_dir();
     fs::create_dir_all(&local_bin)?;
     copy_executable(&zellij_binary, &local_bin.join("zellij"))?;
     Ok(())
 }
 
 fn install_files() -> Result<()> {
-    let local_bin = home_dir().join(".local/bin");
-    let state_dir = home_dir().join(".local/share/agent-workspace");
-    let internal_bin = state_dir.join("bin");
-    let completion_dir = state_dir.join("completions");
-    let plugin_dir = state_dir.join("plugins");
-    fs::create_dir_all(home_dir().join(".config/aw"))?;
+    migrate_legacy_aw_home()?;
+    let local_bin = local_bin_dir();
+    let internal_bin = aw_private_bin_dir();
+    let completion_dir = aw_completions_dir();
+    let plugin_dir = aw_plugins_dir();
+    fs::create_dir_all(aw_home())?;
     fs::create_dir_all(&local_bin)?;
     fs::create_dir_all(&internal_bin)?;
     fs::create_dir_all(&plugin_dir)?;
-    fs::create_dir_all(state_dir.join("profiles"))?;
+    fs::create_dir_all(aw_profiles_dir())?;
     fs::create_dir_all(&completion_dir)?;
 
-    fs::write(home_dir().join(".config/aw/config.kdl"), CONFIG_KDL)?;
+    fs::write(aw_config_file(), CONFIG_KDL)?;
     fs::write(completion_dir.join("_aw"), ZSH_COMPLETION)?;
     fs::write(completion_dir.join("aw.bash"), BASH_COMPLETION)?;
     install_aw_tab_bar_plugin(&plugin_dir)?;
@@ -406,6 +410,50 @@ fn install_files() -> Result<()> {
     }
     for stale in ["backend.kdl", "frontend.kdl"] {
         let _ = fs::remove_file(home_dir().join(".config/aw/layouts").join(stale));
+    }
+    Ok(())
+}
+
+fn migrate_legacy_aw_home() -> Result<()> {
+    let profiles_dir = aw_profiles_dir();
+    let legacy_profiles = aw_legacy_profiles_dir();
+    if !profiles_dir.exists() && legacy_profiles.is_dir() {
+        copy_dir_recursive(&legacy_profiles, &profiles_dir)?;
+    }
+
+    let default_profile = aw_default_profile_file();
+    let legacy_default = aw_legacy_default_profile_file();
+    if !default_profile.exists() && legacy_default.is_file() {
+        if let Some(parent) = default_profile.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::copy(legacy_default, default_profile)?;
+    }
+
+    let config_file = aw_config_file();
+    let legacy_config = aw_legacy_config_file();
+    if !config_file.exists() && legacy_config.is_file() {
+        if let Some(parent) = config_file.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::copy(legacy_config, config_file)?;
+    }
+
+    Ok(())
+}
+
+fn copy_dir_recursive(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let source_path = entry.path();
+        let target_path = target.join(entry.file_name());
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            copy_dir_recursive(&source_path, &target_path)?;
+        } else if file_type.is_file() {
+            fs::copy(source_path, target_path)?;
+        }
     }
     Ok(())
 }
@@ -668,7 +716,7 @@ if [[ -t 0 ]]; then
 fi
 
 if [[ -n "${ZSH_VERSION:-}" ]]; then
-  fpath=("$HOME/.local/share/agent-workspace/completions" "${fpath[@]}")
+  fpath=("${AW_HOME:-$HOME/.aw}/completions" "${fpath[@]}")
   autoload -Uz compinit
   compinit -i
   bindkey -M viins '^[^?' backward-kill-word 2>/dev/null
@@ -677,9 +725,9 @@ if [[ -n "${ZSH_VERSION:-}" ]]; then
   bindkey -M emacs '^[^H' backward-kill-word 2>/dev/null
 fi
 
-if [[ -n "${BASH_VERSION:-}" && -f "$HOME/.local/share/agent-workspace/completions/aw.bash" ]]; then
+if [[ -n "${BASH_VERSION:-}" && -f "${AW_HOME:-$HOME/.aw}/completions/aw.bash" ]]; then
   # shellcheck source=/dev/null
-  source "$HOME/.local/share/agent-workspace/completions/aw.bash"
+  source "${AW_HOME:-$HOME/.aw}/completions/aw.bash"
 fi
 
 if [[ -n "${ZELLIJ:-}" ]]; then
@@ -695,8 +743,8 @@ if [[ -n "${ZELLIJ:-}" ]]; then
   }
 fi
 
-if [[ -n "${ZELLIJ:-}" && "${ZELLIJ_AGENT_TAB_WATCHER_DISABLE:-0}" != "1" && -x "$HOME/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher" ]]; then
-  "$HOME/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher" --start
+if [[ -n "${ZELLIJ:-}" && "${ZELLIJ_AGENT_TAB_WATCHER_DISABLE:-0}" != "1" && -x "${AW_HOME:-$HOME/.aw}/bin/.zellij-agent-tab-watcher" ]]; then
+  "${AW_HOME:-$HOME/.aw}/bin/.zellij-agent-tab-watcher" --start
 fi
 "#
 }
@@ -746,7 +794,7 @@ fn make_executable(_path: &Path) -> Result<()> {
 }
 
 fn path_has_local_bin(path: &str) -> bool {
-    let local_bin = home_dir().join(".local/bin");
+    let local_bin = local_bin_dir();
     env::split_paths(path).any(|entry| entry == local_bin)
 }
 

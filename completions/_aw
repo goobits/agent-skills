@@ -11,9 +11,17 @@ _aw_config_dir() {
     return
   fi
 
-  local default_profile="$HOME/.local/share/agent-workspace/default-profile"
+  local aw_home="${AW_HOME:-$HOME/.aw}"
+  local default_profile="$aw_home/default-profile"
+  local profile_name
   if [[ -f "$default_profile" ]]; then
-    local profile_name
+    profile_name="$(sed -n '1p' "$default_profile")"
+    printf '%s/profiles/%s' "$aw_home" "$profile_name"
+    return
+  fi
+
+  default_profile="$HOME/.local/share/agent-workspace/default-profile"
+  if [[ -f "$default_profile" ]]; then
     profile_name="$(sed -n '1p' "$default_profile")"
     printf '%s/.local/share/agent-workspace/profiles/%s' "$HOME" "$profile_name"
   fi
@@ -43,10 +51,10 @@ _aw_tabs() {
 
 _aw() {
   local -a commands tab_commands commit_commands repo_commands owner_commands
-  commands=(help install setup doctor repo list create refresh rename remove tab commit owner ps kill)
+  commands=(help install setup doctor paths repo list create refresh rename remove tab commit owner ps kill)
   tab_commands=(list add move rename remove refresh)
   commit_commands=(setup request status doctor wait poke)
-  repo_commands=(doctor migrate clean measure-git probe-git-config worktree)
+  repo_commands=(doctor migrate clean measure-git probe-git-config routes worktree)
   owner_commands=(git pkg)
 
   case "${words[2]:-}" in
@@ -91,6 +99,9 @@ _aw() {
           ;;
         probe-git-config)
           compadd -- --path --apply
+          ;;
+        routes)
+          compadd -- doctor --config
           ;;
         worktree)
           compadd -- --branch --base --skip-deps --copy-deps

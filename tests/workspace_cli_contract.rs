@@ -70,10 +70,7 @@ fn workspace_assignment_rename_remove_and_validation_are_rust_contracts() {
         read(project.join("config/aw/main.tabs")),
         "app\nserver\ninfra\nscratch\n"
     );
-    assert!(home
-        .home
-        .join(".local/share/agent-workspace/profiles/my-site/main.tabs")
-        .is_file());
+    assert!(home.home.join(".aw/profiles/my-site/main.tabs").is_file());
     assert_eq!(
         read(home.root.join("main-order.txt")).trim_end(),
         "main\napp\nserver\ninfra\nscratch"
@@ -123,7 +120,7 @@ fn workspace_assignment_rename_remove_and_validation_are_rust_contracts() {
     assert!(!project.join("config/aw/frontend.tabs").exists());
     assert!(!home
         .home
-        .join(".local/share/agent-workspace/profiles/my-site/frontend.tabs")
+        .join(".aw/profiles/my-site/frontend.tabs")
         .exists());
 
     let output = run_in_project(&home, &project, &["remove", "main"]);

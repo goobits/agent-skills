@@ -13,6 +13,13 @@ _aw_completion() {
       printf '%s' "$PWD/config/aw"
       return
     fi
+    local aw_home="${AW_HOME:-$HOME/.aw}"
+    default_profile="$aw_home/default-profile"
+    if [[ -f "$default_profile" ]]; then
+      profile_name="$(sed -n '1p' "$default_profile")"
+      printf '%s/profiles/%s' "$aw_home" "$profile_name"
+      return
+    fi
     default_profile="$HOME/.local/share/agent-workspace/default-profile"
     if [[ -f "$default_profile" ]]; then
       profile_name="$(sed -n '1p' "$default_profile")"
@@ -76,7 +83,7 @@ _aw_completion() {
       ;;
     repo)
       if [[ "$COMP_CWORD" -eq 2 ]]; then
-        COMPREPLY=( $(compgen -W "doctor migrate clean measure-git probe-git-config worktree" -- "$cur") )
+        COMPREPLY=( $(compgen -W "doctor migrate clean measure-git probe-git-config routes worktree" -- "$cur") )
       else
         case "${COMP_WORDS[2]:-}" in
           migrate)
@@ -87,6 +94,9 @@ _aw_completion() {
             ;;
           probe-git-config)
             COMPREPLY=( $(compgen -W "--path --apply" -- "$cur") )
+            ;;
+          routes)
+            COMPREPLY=( $(compgen -W "doctor --config" -- "$cur") )
             ;;
           worktree)
             COMPREPLY=( $(compgen -W "--branch --base --skip-deps --copy-deps" -- "$cur") )
@@ -137,7 +147,7 @@ _aw_completion() {
       ;;
     *)
       if [[ "$COMP_CWORD" -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "help install setup doctor repo list create refresh rename remove tab commit owner ps kill $(_aw_workspaces)" -- "$cur") )
+        COMPREPLY=( $(compgen -W "help install setup doctor paths repo list create refresh rename remove tab commit owner ps kill $(_aw_workspaces)" -- "$cur") )
       elif [[ "$COMP_CWORD" -gt 1 ]]; then
         COMPREPLY=( $(compgen -W "-s --session -r --root" -- "$cur") )
       fi

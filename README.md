@@ -38,6 +38,11 @@ cargo run --manifest-path infra/aw/Cargo.toml -- install
 If `zellij` is missing, the installer downloads pinned Zellij `0.44.3` for
 supported platforms. Set `ZELLIJ_INSTALL_BINARY=0` to skip that step.
 
+AW-owned state is installed under `~/.aw` by default. Set `AW_HOME` to use a
+custom home. Existing installs under `~/.local/share/agent-workspace` and
+`~/.config/aw` are read as legacy fallbacks and copied forward during install
+when `~/.aw` is not already populated.
+
 Refresh a profile directly when needed:
 
 ```bash
@@ -363,6 +368,12 @@ Workspace names are just file names. `aw frontend` opens
 Shell completions are installed for zsh and bash. They complete commands,
 workspace names, tab names, and commit queue flags from the current profile.
 
+Inspect the active AW locations when debugging setup:
+
+```bash
+aw paths
+```
+
 Inside Zellij, the watcher marks background activity:
 
 | Marker | Meaning |
@@ -375,10 +386,10 @@ Watcher controls:
 ```bash
 ZELLIJ_AGENT_TAB_WATCHER_DISABLE=1 aw front
 ZELLIJ_AGENT_TAB_WATCHER_POLL_SECONDS=0.5 aw front
-ZELLIJ_SESSION_NAME=front ~/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher --status
-ZELLIJ_SESSION_NAME=front ~/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher --restart
-ZELLIJ_SESSION_NAME=front ~/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher --stop
-ZELLIJ_SESSION_NAME=front ~/.local/share/agent-workspace/bin/.zellij-agent-tab-watcher --log 40
+ZELLIJ_SESSION_NAME=front ~/.aw/bin/.zellij-agent-tab-watcher --status
+ZELLIJ_SESSION_NAME=front ~/.aw/bin/.zellij-agent-tab-watcher --restart
+ZELLIJ_SESSION_NAME=front ~/.aw/bin/.zellij-agent-tab-watcher --stop
+ZELLIJ_SESSION_NAME=front ~/.aw/bin/.zellij-agent-tab-watcher --log 40
 ```
 
 Session behavior:
@@ -404,7 +415,7 @@ The public binary is installed as:
 Private helper binaries live under:
 
 ```text
-~/.local/share/agent-workspace/bin/
+~/.aw/bin/
 ```
 
 Helpers include `zwork`, `zellij-workspace-init`,
@@ -416,9 +427,19 @@ Helpers include `zwork`, `zellij-workspace-init`,
 The installer also writes:
 
 ```text
-~/.config/aw/config.kdl
-~/.local/share/agent-workspace/completions/
+~/.aw/config.kdl
+~/.aw/default-profile
+~/.aw/profiles/
+~/.aw/completions/
+~/.aw/plugins/
 marked shell blocks in ~/.zshrc and ~/.bashrc
+```
+
+Legacy fallback paths are still recognized for existing installs:
+
+```text
+~/.local/share/agent-workspace/
+~/.config/aw/config.kdl
 ```
 
 Run these after changing AW:

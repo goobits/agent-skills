@@ -7,7 +7,11 @@ use crate::error::{AwError, Result};
 use crate::git_queue;
 use crate::installer::{install_repo_adapters, install_workspace_setup};
 use crate::package_queue;
-use crate::paths::{current_dir, path_string, resolve_root, validate_name};
+use crate::paths::{
+    aw_completions_dir, aw_config_file, aw_default_profile_file, aw_home, aw_legacy_config_file,
+    aw_legacy_default_profile_file, aw_legacy_profiles_dir, aw_plugins_dir, aw_private_bin_dir,
+    aw_profiles_dir, current_dir, local_bin_dir, path_string, resolve_root, validate_name,
+};
 use crate::profile::{
     add_profile_workspace, auto_install_config, create_initial_profile, find_config_dir,
     install_profile, list_workspaces, profile_dir_from_installed_default, remove_profile_workspace,
@@ -75,6 +79,7 @@ system:
   aw install [--repo] [--config <profile-dir>] [--dry-run]
   aw setup --config <profile-dir>
   aw doctor [--config <profile-dir>]
+  aw paths
   aw help
 "#;
 
@@ -96,6 +101,7 @@ pub fn run(args: Vec<String>) -> Result<i32> {
             Ok(0)
         }
         "doctor" => run_doctor(&args[1..]),
+        "paths" => run_paths(&args[1..]),
         "migrate" => repo_tasks::run_migrate(&args[1..]),
         "list" => run_list(&args[1..]),
         "create" => {
@@ -183,9 +189,14 @@ fn run_owner_command(args: &[String]) -> Result<i32> {
 
 fn run_repo_command(args: &[String]) -> Result<i32> {
     let Some((command, rest)) = args.split_first() else {
-        return Err(AwError::usage("aw: repo requires a command"));
+        workspace_tasks::print_usage();
+        return Ok(0);
     };
     match command.as_str() {
+        "-h" | "--help" | "help" => {
+            workspace_tasks::print_usage();
+            Ok(0)
+        }
         "doctor" => repo_tasks::run_doctor(rest),
         "migrate" => {
             let mut migrate_args = vec!["repo".to_string()];
@@ -197,8 +208,42 @@ fn run_repo_command(args: &[String]) -> Result<i32> {
         "probe-git-config" => workspace_tasks::run_named("probe-git-config", rest),
         "routes" => workspace_tasks::run_named("routes", rest),
         "worktree" => brush_worktree::run(rest),
-        other => Err(AwError::usage(format!("aw: unknown repo command {other}"))),
+        other => Err(AwError::new(
+            format!(
+                "aw: unknown repo command {other}\n\n{}",
+                workspace_tasks::REPO_USAGE
+            ),
+            2,
+        )),
     }
+}
+
+fn run_paths(args: &[String]) -> Result<i32> {
+    if !args.is_empty() {
+        return Err(AwError::new(
+            "aw: paths does not accept arguments\n\nusage:\n  aw paths",
+            2,
+        ));
+    }
+
+    println!("AW Paths");
+    println!("Home         {}", path_string(&aw_home()));
+    println!("Config       {}", path_string(&aw_config_file()));
+    println!("Profiles     {}", path_string(&aw_profiles_dir()));
+    println!("Default      {}", path_string(&aw_default_profile_file()));
+    println!("Bin          {}", path_string(&aw_private_bin_dir()));
+    println!("Completions  {}", path_string(&aw_completions_dir()));
+    println!("Plugins      {}", path_string(&aw_plugins_dir()));
+    println!("Public bin   {}", path_string(&local_bin_dir()));
+    println!();
+    println!("Legacy");
+    println!("Config       {}", path_string(&aw_legacy_config_file()));
+    println!("Profiles     {}", path_string(&aw_legacy_profiles_dir()));
+    println!(
+        "Default      {}",
+        path_string(&aw_legacy_default_profile_file())
+    );
+    Ok(0)
 }
 
 fn run_brush_api_command(args: &[String]) -> Result<i32> {
